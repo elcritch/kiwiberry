@@ -1,6 +1,4 @@
-## Root module for kiwiberry.
+import
+  kiwiberry/[constraints, errors, expressions, scalars, solver, strengths, variables]
 
-proc greet*(name: string): string =
-  ## Returns a greeting for `name`.
-  "hello, " & name
-
+export constraints, errors, expressions, scalars, solver, strengths, variables

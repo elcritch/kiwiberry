@@ -1,51 +1,58 @@
 # kiwiberry
 
-GitHub template repository for Nim packages using Atlas for dependency
-management and GitHub Actions for CI.
+`kiwiberry` is a pure Nim Cassowary constraint solver based on Kiwi. It solves
+linear equalities and inequalities with constraint strengths and edit variables,
+which is the style of solver commonly used for interactive UI layout.
 
-## Use This Template
-
-1. Create a new repository with GitHub's "Use this template" button.
-2. Clone the new repository locally.
-3. Pick the Nim package name you want to publish, using letters, numbers, and
-   underscores.
-4. Run:
-
-```sh
-./scripts/rename_template.sh your_package_name
-```
-
-That updates the starter package/module/test filenames and rewrites the
-remaining `kiwiberry` / `kiwiberry` references in the template files.
-
-## Setup
+## Install
 
 ```sh
 atlas install
 ```
 
-Atlas writes dependency paths to `nim.cfg` and installs dependencies under
-`deps/`. Those files are intentionally ignored.
+## Example
+
+```nim
+import kiwiberry
+
+var solver = initSolver()
+let x = newVariable("x")
+let y = newVariable("y")
+
+solver.addConstraint(x + y == 10)
+solver.addConstraint(x - y == 4)
+solver.updateVariables()
+
+doAssert x.value == 7.KiwiScalar
+doAssert y.value == 3.KiwiScalar
+```
+
+## Edit Variables
+
+```nim
+import kiwiberry
+
+var solver = initSolver()
+let width = newVariable("width")
+
+solver.addEditVariable(width, Strong)
+solver.addConstraint(width >= 100)
+solver.suggestValue(width, 240)
+solver.updateVariables()
+
+doAssert width.value == 240.KiwiScalar
+```
+
+Variables are identity-bearing refs, matching Kiwi's copy semantics. Use
+`sameVariable(a, b)` when you need to test variable identity in user code,
+because `==`, `<=`, and `>=` are part of the constraint DSL.
 
 ## Test
-
-Run the full test suite:
 
 ```sh
 nim test
 ```
 
-Run a single test:
+## License
 
-```sh
-nim r tests/tyour_package_name.nim
-```
-
-## Layout
-
-- `src/your_package_name.nim`: package module after renaming.
-- `tests/tyour_package_name.nim`: unit tests after renaming.
-- `config.nims`: shared Nim switches and the `nim test` task.
-- `.github/workflows/ci.yml`: GitHub Actions CI.
-- `scripts/rename_template.sh`: one-shot template bootstrap rename.
-# kiwiberry
+Kiwiberry uses BSD-3-Clause terms based on Kiwi's license. See `LICENSE`.
