@@ -10,6 +10,15 @@ block solverCreation:
   var solver = initSolver()
   doAssert solver.dumps.contains("Objective")
 
+block refSolverCreation:
+  let solver = newSolver()
+  let x = newVariable("x")
+
+  solver.addConstraint(x == 1)
+  solver.updateVariables()
+
+  doAssert x.value.closeTo(1)
+
 block managingConstraints:
   var solver = initSolver()
   let variable = newVariable("foo")

@@ -8,3 +8,4 @@ task test, "run unit tests":
     if testFile.endsWith(".nim") and testFile.splitFile().name.startsWith("t"):
       exec("nim c -r " & quoteShell(testFile))
 
+  exec("nim js -r " & quoteShell("tests/tjsvariables.nim"))

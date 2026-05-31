@@ -1,3 +1,5 @@
+## Public solver API.
+
 import std/[algorithm, sequtils, tables]
 
 import ./[constraints, errors, expressions, scalars, strengths, variables]
@@ -13,7 +15,7 @@ type
     constraint: Constraint
     constant: KiwiScalar
 
-  Solver* = object
+  Solver* = object ## Incremental Cassowary solver state.
     constraints: OrderedTable[Constraint, Tag]
     rows: OrderedTable[Symbol, Row]
     vars: OrderedTable[VariableId, Symbol]
@@ -25,7 +27,10 @@ type
     hasArtificial: bool
     idTick: uint64
 
+  SolverRef* = ref Solver ## Shared solver handle returned by `newSolver`.
+
 proc initSolver*(): Solver =
+  ## Creates an empty value-style solver.
   Solver(
     constraints: initOrderedTable[Constraint, Tag](),
     rows: initOrderedTable[Symbol, Row](),
@@ -36,6 +41,11 @@ proc initSolver*(): Solver =
     artificial: initRow(),
     idTick: 1,
   )
+
+proc newSolver*(): SolverRef =
+  ## Creates an empty ref-style solver handle.
+  new(result)
+  result[] = initSolver()
 
 proc newSymbol(solver: var Solver, kind: SymbolKind): Symbol =
   result = initSymbol(kind, SymbolId(solver.idTick))
@@ -268,6 +278,11 @@ proc removeConstraintEffects(solver: var Solver, constraint: Constraint, tag: Ta
     solver.removeMarkerEffects(tag.other, constraint.strength)
 
 proc addConstraint*(solver: var Solver, constraint: Constraint) =
+  ## Adds `constraint` to `solver`.
+  ##
+  ## Raises `DuplicateConstraintError` if the same constraint identity is
+  ## already present. Raises `UnsatisfiableConstraintError` for required
+  ## constraints that cannot be satisfied.
   if solver.constraints.hasKey(constraint):
     raiseDuplicateConstraint(constraint)
 
@@ -292,6 +307,9 @@ proc addConstraint*(solver: var Solver, constraint: Constraint) =
   solver.optimize(solver.objective)
 
 proc removeConstraint*(solver: var Solver, constraint: Constraint) =
+  ## Removes `constraint` from `solver`.
+  ##
+  ## Raises `UnknownConstraintError` when the constraint has not been added.
   if not solver.constraints.hasKey(constraint):
     raiseUnknownConstraint(constraint)
 
@@ -314,9 +332,14 @@ proc removeConstraint*(solver: var Solver, constraint: Constraint) =
   solver.optimize(solver.objective)
 
 proc hasConstraint*(solver: Solver, constraint: Constraint): bool =
+  ## Returns true when `constraint` has been added to `solver`.
   solver.constraints.hasKey(constraint)
 
 proc addEditVariable*(solver: var Solver, variable: Variable, strength: Strength) =
+  ## Adds `variable` as an editable variable with a non-required strength.
+  ##
+  ## Raises `DuplicateEditVariableError` when already present and
+  ## `BadRequiredStrengthError` when `strength` clips to `Required`.
   if solver.edits.hasKey(variable.variableId):
     raiseDuplicateEditVariable(variable)
 
@@ -331,6 +354,9 @@ proc addEditVariable*(solver: var Solver, variable: Variable, strength: Strength
   )
 
 proc removeEditVariable*(solver: var Solver, variable: Variable) =
+  ## Removes an editable variable.
+  ##
+  ## Raises `UnknownEditVariableError` if `variable` is not editable.
   if not solver.edits.hasKey(variable.variableId):
     raiseUnknownEditVariable(variable)
   let info = solver.edits[variable.variableId]
@@ -338,9 +364,13 @@ proc removeEditVariable*(solver: var Solver, variable: Variable) =
   solver.edits.del(variable.variableId)
 
 proc hasEditVariable*(solver: Solver, variable: Variable): bool =
+  ## Returns true when `variable` has been added as an edit variable.
   solver.edits.hasKey(variable.variableId)
 
 proc suggestValue*(solver: var Solver, variable: Variable, value: KiwiScalar) =
+  ## Suggests a new value for an edit variable and dual-optimizes the solver.
+  ##
+  ## Raises `UnknownEditVariableError` if `variable` is not editable.
   if not solver.edits.hasKey(variable.variableId):
     raiseUnknownEditVariable(variable)
 
@@ -370,6 +400,7 @@ proc suggestValue*(solver: var Solver, variable: Variable, value: KiwiScalar) =
   solver.dualOptimize()
 
 proc updateVariables*(solver: var Solver) =
+  ## Writes solved values back into all external variables known to `solver`.
   for id, variable in solver.variables:
     let symbol = solver.vars[id]
     if solver.rows.hasKey(symbol):
@@ -378,9 +409,11 @@ proc updateVariables*(solver: var Solver) =
       variable.value = 0
 
 proc reset*(solver: var Solver) =
+  ## Resets the solver to the empty starting state.
   solver = initSolver()
 
 proc dumps*(solver: Solver): string =
+  ## Returns a textual dump of the current solver internals.
   result.add "Objective\n---------\n"
   for symbol, coefficient in solver.objective.cells:
     result.add " + " & $coefficient & " * " & $symbol
@@ -397,4 +430,49 @@ proc dumps*(solver: Solver): string =
   result.add $solver.constraints.len & "\n"
 
 proc dump*(solver: Solver) =
+  ## Writes a textual dump of the current solver internals to stdout.
   echo solver.dumps
+
+proc addConstraint*(solver: SolverRef, constraint: Constraint) =
+  ## Adds `constraint` to a ref-style solver.
+  solver[].addConstraint(constraint)
+
+proc removeConstraint*(solver: SolverRef, constraint: Constraint) =
+  ## Removes `constraint` from a ref-style solver.
+  solver[].removeConstraint(constraint)
+
+proc hasConstraint*(solver: SolverRef, constraint: Constraint): bool =
+  ## Returns true when `constraint` has been added to a ref-style solver.
+  solver[].hasConstraint(constraint)
+
+proc addEditVariable*(solver: SolverRef, variable: Variable, strength: Strength) =
+  ## Adds `variable` as an edit variable on a ref-style solver.
+  solver[].addEditVariable(variable, strength)
+
+proc removeEditVariable*(solver: SolverRef, variable: Variable) =
+  ## Removes an edit variable from a ref-style solver.
+  solver[].removeEditVariable(variable)
+
+proc hasEditVariable*(solver: SolverRef, variable: Variable): bool =
+  ## Returns true when `variable` is editable in a ref-style solver.
+  solver[].hasEditVariable(variable)
+
+proc suggestValue*(solver: SolverRef, variable: Variable, value: KiwiScalar) =
+  ## Suggests a new edit-variable value on a ref-style solver.
+  solver[].suggestValue(variable, value)
+
+proc updateVariables*(solver: SolverRef) =
+  ## Writes solved values back into variables known to a ref-style solver.
+  solver[].updateVariables()
+
+proc reset*(solver: SolverRef) =
+  ## Resets a ref-style solver to the empty starting state.
+  solver[] = initSolver()
+
+proc dumps*(solver: SolverRef): string =
+  ## Returns a textual dump from a ref-style solver.
+  solver[].dumps()
+
+proc dump*(solver: SolverRef) =
+  ## Writes a textual dump from a ref-style solver to stdout.
+  solver[].dump()

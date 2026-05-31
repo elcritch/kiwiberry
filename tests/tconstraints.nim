@@ -28,6 +28,52 @@ block constraintReduction:
   doAssert constraint.expression.len == 1
   doAssert constraint.expression.terms[0].coefficient == 2.KiwiScalar
 
+block namedConstraintConstructors:
+  let first = newVariable("foo")
+  let second = newVariable("bar")
+
+  let lessEqual = le(first + 1, second)
+  doAssert lessEqual.relation == relLe
+  doAssert lessEqual.expression.constant == 1.KiwiScalar
+  doAssert lessEqual.expression.len == 2
+
+  let greaterEqual = ge(first, 10)
+  doAssert greaterEqual.relation == relGe
+  doAssert greaterEqual.expression.constant == -10.KiwiScalar
+  doAssert greaterEqual.expression.len == 1
+
+  let equal = eq(first, second + 3)
+  doAssert equal.relation == relEq
+  doAssert equal.expression.constant == -3.KiwiScalar
+  doAssert equal.expression.len == 2
+
+block variableVariableDsl:
+  let first = newVariable("foo")
+  let second = newVariable("bar")
+
+  doAssert (first <= second).relation == relLe
+  doAssert (first >= second).relation == relGe
+  doAssert (first == second).relation == relEq
+
+block scalarVariableDsl:
+  let variable = newVariable("foo")
+
+  let lowerBound = 10 <= variable
+  doAssert lowerBound.relation == relGe
+  doAssert lowerBound.expression.constant == -10.KiwiScalar
+
+  let upperBound = 10 >= variable
+  doAssert upperBound.relation == relLe
+  doAssert upperBound.expression.constant == -10.KiwiScalar
+
+  let namedLowerBound = le(10, variable)
+  doAssert namedLowerBound.relation == relLe
+  doAssert namedLowerBound.expression.constant == 10.KiwiScalar
+
+  let namedUpperBound = ge(10, variable)
+  doAssert namedUpperBound.relation == relGe
+  doAssert namedUpperBound.expression.constant == 10.KiwiScalar
+
 block constraintStrength:
   let variable = newVariable("foo")
   let constraint = newConstraint(variable + 1, relEq)

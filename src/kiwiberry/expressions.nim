@@ -1,47 +1,60 @@
+## Linear terms and expressions.
+
 import ./[scalars, variables]
 
 type
-  Term* = object
+  Term* = object ## Variable/coefficient pair.
     variableValue: Variable
     coefficientValue: KiwiScalar
 
-  Expression* = object
+  Expression* = object ## Linear expression plus constant.
     termsValue: seq[Term]
     constantValue: KiwiScalar
 
 proc initTerm*(variable: Variable, coefficient: KiwiScalar = 1): Term =
+  ## Creates a term for `coefficient * variable`.
   Term(variableValue: variable, coefficientValue: coefficient)
 
 proc initExpression*(
     terms: openArray[Term] = [], constant: KiwiScalar = 0
 ): Expression =
+  ## Creates an expression from terms and a constant.
   Expression(termsValue: @terms, constantValue: constant)
 
 proc toExpression*(variable: Variable): Expression =
+  ## Converts a variable to a one-term expression.
   initExpression([initTerm(variable)])
 
 proc toExpression*(term: Term): Expression =
+  ## Converts a term to a one-term expression.
   initExpression([term])
 
 proc toExpression*(constant: KiwiScalar): Expression =
+  ## Converts a constant to an expression with no terms.
   initExpression(constant = constant)
 
 proc variable*(term: Term): Variable =
+  ## Returns the variable used by `term`.
   term.variableValue
 
 proc coefficient*(term: Term): KiwiScalar =
+  ## Returns the coefficient used by `term`.
   term.coefficientValue
 
 proc value*(term: Term): KiwiScalar =
+  ## Evaluates the term using the variable's current value.
   term.coefficientValue * term.variableValue.value
 
 proc terms*(expression: Expression): lent seq[Term] =
+  ## Returns the expression terms.
   expression.termsValue
 
 proc constant*(expression: Expression): KiwiScalar =
+  ## Returns the expression constant.
   expression.constantValue
 
 proc len*(expression: Expression): int =
+  ## Returns the number of terms in the expression.
   expression.termsValue.len
 
 iterator items*(expression: Expression): Term =
@@ -49,6 +62,7 @@ iterator items*(expression: Expression): Term =
     yield term
 
 proc value*(expression: Expression): KiwiScalar =
+  ## Evaluates the expression using current variable values.
   result = expression.constantValue
   for term in expression.termsValue:
     result += term.value

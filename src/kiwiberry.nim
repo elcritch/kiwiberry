@@ -1,3 +1,5 @@
+## Pure Nim Cassowary constraint solver based on Kiwi.
+
 import
   kiwiberry/[constraints, errors, expressions, scalars, solver, strengths, variables]
 

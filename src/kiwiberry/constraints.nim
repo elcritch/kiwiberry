@@ -1,14 +1,16 @@
+## Constraint construction and query API.
+
 import std/[hashes, tables]
 
 import ./[expressions, scalars, strengths, variables]
 
 type
-  Relation* = enum
-    relLe
-    relGe
-    relEq
+  Relation* = enum ## Relational operator used by a constraint.
+    relLe ## Less-than-or-equal relation: expression <= 0.
+    relGe ## Greater-than-or-equal relation: expression >= 0.
+    relEq ## Equality relation: expression == 0.
 
-  Constraint* = ref object
+  Constraint* = ref object ## Identity-bearing linear constraint.
     id: uint64
     expressionValue: Expression
     relationValue: Relation
@@ -35,6 +37,10 @@ proc reduce(expression: Expression): Expression =
 proc newConstraint*(
     expression: Expression, relation: Relation, strength: Strength = Required
 ): Constraint =
+  ## Creates a constraint from an already-normalized expression.
+  ##
+  ## The expression is reduced by variable identity and the strength is clipped
+  ## into Kiwi's supported strength range.
   new(result)
   result.id = nextConstraintId
   inc nextConstraintId
@@ -43,24 +49,31 @@ proc newConstraint*(
   result.strengthValue = strength.clip
 
 proc expression*(constraint: Constraint): lent Expression =
+  ## Returns the reduced expression stored by `constraint`.
   constraint.expressionValue
 
 proc relation*(constraint: Constraint): Relation =
+  ## Returns the relation used by `constraint`.
   constraint.relationValue
 
 proc strength*(constraint: Constraint): Strength =
+  ## Returns the clipped strength used by `constraint`.
   constraint.strengthValue
 
 proc sameConstraint*(a, b: Constraint): bool =
+  ## Returns true when both handles refer to the same constraint identity.
   a != nil and b != nil and a.id == b.id
 
 proc `==`*(a, b: Constraint): bool =
+  ## Compares constraint identity, not structural equality.
   a.sameConstraint(b)
 
 proc hash*(constraint: Constraint): Hash =
+  ## Hashes a constraint by identity.
   hash(constraint.id)
 
 proc violated*(constraint: Constraint): bool =
+  ## Returns true when the current variable values violate `constraint`.
   case constraint.relationValue
   of relEq:
     not constraint.expressionValue.value.nearZero
@@ -70,9 +83,11 @@ proc violated*(constraint: Constraint): bool =
     constraint.expressionValue.value > 0
 
 proc withStrength*(constraint: Constraint, strength: Strength): Constraint =
+  ## Returns a new constraint with the same expression/relation and new strength.
   newConstraint(constraint.expressionValue, constraint.relationValue, strength)
 
 proc `|`*(constraint: Constraint, strength: Strength): Constraint =
+  ## Convenience syntax for `withStrength`.
   constraint.withStrength(strength)
 
 proc toExpressionForConstraint(value: Expression): Expression =
@@ -93,14 +108,29 @@ proc makeConstraint[A, B](left: A, relation: Relation, right: B): Constraint =
   )
 
 type ConstraintSide = Expression | Term | Variable
+type ConstraintValue = Expression | Term | Variable | KiwiScalar
+
+proc le*[A: ConstraintValue, B: ConstraintValue](left: A, right: B): Constraint =
+  ## Creates a less-than-or-equal constraint from `left <= right`.
+  makeConstraint(left, relLe, right)
+
+proc ge*[A: ConstraintValue, B: ConstraintValue](left: A, right: B): Constraint =
+  ## Creates a greater-than-or-equal constraint from `left >= right`.
+  makeConstraint(left, relGe, right)
+
+proc eq*[A: ConstraintValue, B: ConstraintValue](left: A, right: B): Constraint =
+  ## Creates an equality constraint from `left == right`.
+  makeConstraint(left, relEq, right)
 
 proc `<=`*[A: ConstraintSide, B: ConstraintSide](left: A, right: B): Constraint =
+  ## Creates a less-than-or-equal constraint from `left <= right`.
   makeConstraint(left, relLe, right)
 
 proc `<=`*(left, right: Variable): Constraint =
   makeConstraint(left, relLe, right)
 
 proc `<=`*[A: ConstraintSide](left: A, right: KiwiScalar): Constraint =
+  ## Creates a less-than-or-equal constraint from `left <= right`.
   makeConstraint(left, relLe, right)
 
 proc `<=`*[B: ConstraintSide](left: KiwiScalar, right: B): Constraint =
@@ -109,24 +139,28 @@ proc `<=`*[B: ConstraintSide](left: KiwiScalar, right: B): Constraint =
   makeConstraint(right, relGe, left)
 
 proc `>=`*[A: ConstraintSide, B: ConstraintSide](left: A, right: B): Constraint =
+  ## Creates a greater-than-or-equal constraint from `left >= right`.
   makeConstraint(left, relGe, right)
 
 proc `>=`*(left, right: Variable): Constraint =
   makeConstraint(left, relGe, right)
 
 proc `>=`*[A: ConstraintSide](left: A, right: KiwiScalar): Constraint =
+  ## Creates a greater-than-or-equal constraint from `left >= right`.
   makeConstraint(left, relGe, right)
 
 proc `>=`*[B: ConstraintSide](left: KiwiScalar, right: B): Constraint =
   makeConstraint(left, relGe, right)
 
 proc `==`*[A: ConstraintSide, B: ConstraintSide](left: A, right: B): Constraint =
+  ## Creates an equality constraint from `left == right`.
   makeConstraint(left, relEq, right)
 
 proc `==`*(left, right: Variable): Constraint =
   makeConstraint(left, relEq, right)
 
 proc `==`*[A: ConstraintSide](left: A, right: KiwiScalar): Constraint =
+  ## Creates an equality constraint from `left == right`.
   makeConstraint(left, relEq, right)
 
 proc `==`*[B: ConstraintSide](left: KiwiScalar, right: B): Constraint =
