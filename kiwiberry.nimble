@@ -1,7 +1,7 @@
 version       = "0.1.0"
 author        = "Your Name"
 description   = "A Nim package."
-license       = "MIT"
+license       = "BSD-3-Clause"
 srcDir        = "src"
 
 requires "nim >= 2.0.0"

@@ -1,6 +1,7 @@
 *
 !*/
 !*.*
+!LICENSE
 
 # Atlas/Nim dependency and generated config state.
 deps/
@@ -21,4 +22,3 @@ tests/output/
 .tool-versions
 .env
 .env.*
-
