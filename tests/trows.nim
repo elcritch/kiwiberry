@@ -12,6 +12,7 @@ block rowInsertAndRemove:
   row.insert(first, 2)
   row.insert(second, 3)
   row.insert(first, -2)
+  row.insert(first, 0)
 
   doAssert row.coefficientFor(first) == 0.KiwiScalar
   doAssert row.coefficientFor(second) == 3.KiwiScalar
