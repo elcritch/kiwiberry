@@ -1,13 +1,11 @@
 ## Validation helpers and input error types.
 
-import std/math
-
 type InvalidSolverValueError* = object of ValueError
   ## Numeric solver input is not usable.
 
 func isFiniteNumber*(value: float64): bool =
   ## Returns true when `value` is neither NaN nor infinity.
-  classify(value) notin {fcNan, fcInf, fcNegInf}
+  value == value and value != Inf and value != NegInf
 
 func requireFiniteNumber*(value: float64, name: string): float64 =
   ## Returns `value` or raises when it is NaN or infinity.

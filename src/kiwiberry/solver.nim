@@ -23,7 +23,7 @@ type
     constraints: OrderedTable[Constraint, Tag]
     rows: AssocMap[Symbol, Row]
     vars: AssocMap[VariableId, VarInfo]
-    edits: OrderedTable[VariableId, EditInfo]
+    edits: Table[VariableId, EditInfo]
     infeasibleRows: seq[Symbol]
     objective: Row
     artificial: Row
@@ -38,7 +38,7 @@ proc initSolver*(): Solver =
     constraints: initOrderedTable[Constraint, Tag](),
     rows: initAssocMap[Symbol, Row](),
     vars: initAssocMap[VariableId, VarInfo](),
-    edits: initOrderedTable[VariableId, EditInfo](),
+    edits: initTable[VariableId, EditInfo](),
     objective: initRow(),
     artificial: initRow(),
     idTick: 1,
@@ -404,29 +404,33 @@ proc suggestValue*(solver: var Solver, variable: Variable, value: KiwiScalar) =
   ##
   ## Raises `UnknownEditVariableError` if `variable` is not editable.
   let checkedValue = value.requireFinite("suggested value")
-  if not solver.edits.hasKey(variable.variableId):
+  let id = variable.variableId
+  var marker: Symbol
+  var other: Symbol
+  var delta: KiwiScalar
+
+  solver.edits.withValue(id, info):
+    delta = checkedValue - info[].constant
+    info[].constant = checkedValue
+    marker = info[].tag.marker
+    other = info[].tag.other
+  do:
     raiseUnknownEditVariable(variable)
 
-  var info = solver.edits[variable.variableId]
-  let delta = KiwiScalar(checkedValue.float64 - info.constant.float64)
-  info.constant = checkedValue
-  solver.edits[variable.variableId] = info
-
-  solver.rows.withValue(info.tag.marker, row):
-    if row[].add(KiwiScalar(-delta.float64)) < 0:
-      solver.infeasibleRows.add info.tag.marker
+  solver.rows.withValue(marker, row):
+    if row[].add(-delta) < 0:
+      solver.infeasibleRows.add marker
     solver.dualOptimize()
     return
 
-  solver.rows.withValue(info.tag.other, row):
+  solver.rows.withValue(other, row):
     if row[].add(delta) < 0:
-      solver.infeasibleRows.add info.tag.other
+      solver.infeasibleRows.add other
     solver.dualOptimize()
     return
 
   for symbol, row in solver.rows.mpairs:
-    if row.addProductFor(info.tag.marker, delta) and row.constant < 0 and
-        not symbol.isExternal:
+    if row.addProductFor(marker, delta) and row.constant < 0 and not symbol.isExternal:
       solver.infeasibleRows.add symbol
 
   solver.dualOptimize()
@@ -434,14 +438,10 @@ proc suggestValue*(solver: var Solver, variable: Variable, value: KiwiScalar) =
 proc updateVariables*(solver: var Solver) =
   ## Writes solved values back into all external variables known to `solver`.
   for _, info in solver.vars.mpairs:
-    var updated = false
     solver.rows.withValue(info.symbol, row):
-      if info.variable.value != row[].constant:
-        info.variable.value = row[].constant
-      updated = true
-    if not updated:
-      if info.variable.value != 0:
-        info.variable.value = 0
+      info.variable.setSolverValue(row[].constant)
+    do:
+      info.variable.setSolverValue(0)
 
 proc reset*(solver: var Solver) =
   ## Resets the solver to the empty starting state.

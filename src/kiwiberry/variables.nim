@@ -67,6 +67,10 @@ proc `value=`*(variable: Variable, value: KiwiScalar) =
   ## Updates the variable's current value.
   variable.currentValue = value.requireFinite("variable value")
 
+proc setSolverValue*(variable: Variable, value: KiwiScalar) {.inline.} =
+  ## Writes a finite value produced by the solver without repeating validation.
+  variable.currentValue = value
+
 proc hash*(variable: Variable): Hash =
   ## Hashes a variable by identity.
   hash(variable.id)

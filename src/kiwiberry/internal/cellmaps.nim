@@ -24,9 +24,17 @@ proc lowerIndex(map: CellMap, symbol: Symbol): int {.inline.} =
   low
 
 proc findIndex(map: CellMap, symbol: Symbol): int {.inline.} =
-  result = map.lowerIndex(symbol)
-  if result >= map.entries.len or map.entries[result].symbol != symbol:
-    result = -1
+  if map.entries.len <= 8:
+    for index in 0 ..< map.entries.len:
+      let current = map.entries[index].symbol
+      if current == symbol:
+        return index
+      if symbol < current:
+        return -1
+    return -1
+
+  let index = map.lowerIndex(symbol)
+  if index < map.entries.len and map.entries[index].symbol == symbol: index else: -1
 
 proc len*(map: CellMap): int {.inline.} =
   map.entries.len
