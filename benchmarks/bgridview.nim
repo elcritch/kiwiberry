@@ -144,10 +144,10 @@ proc updateLayout(bench: var GridBench, iteration: int) =
 
 proc checksum(bench: GridBench): float64 =
   for cell in 0 ..< CellCount:
-    result += bench.vars.cellLeft[cell].value.toFloat
-    result += bench.vars.cellTop[cell].value.toFloat
-    result += bench.vars.cellWidth[cell].value.toFloat
-    result += bench.vars.cellHeight[cell].value.toFloat
+    result += bench.vars.cellLeft[cell].value.float64
+    result += bench.vars.cellTop[cell].value.float64
+    result += bench.vars.cellWidth[cell].value.float64
+    result += bench.vars.cellHeight[cell].value.float64
 
 proc finishTiming(
     benchName: string, iterations: int, started: MonoTime, sum: float64

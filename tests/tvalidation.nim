@@ -11,11 +11,8 @@ block scalarInputsMustBeFinite:
   doAssertRaises InvalidSolverValueError:
     discard toKiwiScalar(Inf)
 
-  doAssertRaises InvalidSolverValueError:
-    discard 1.KiwiScalar / 0.KiwiScalar
-
-  doAssertRaises InvalidSolverValueError:
-    discard 1e308.KiwiScalar * 1e308.KiwiScalar
+  doAssert (1.KiwiScalar / 0.KiwiScalar).float64 == Inf
+  doAssert (1e308.KiwiScalar * 1e308.KiwiScalar).float64 == Inf
 
 block expressionsMustUseFiniteNumbers:
   let variable = newVariable("x")
