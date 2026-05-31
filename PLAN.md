@@ -13,6 +13,9 @@ This plan tracks only the work still worth doing after the initial port.
 - `kiwiberry.nimble` no longer depends on Kiwi or cssgrid for normal builds.
 - `LICENSE` uses BSD-3-Clause terms based on Kiwi's license.
 - `README.md` contains runnable basic and edit-variable examples.
+- All upstream Kiwi C++ test files have corresponding Nim coverage:
+  `VariableTest`, `TermTest`, `ExpressionTest`, `ConstraintTest`, `StrengthTest`,
+  `SolverTest`, and `SimplexTest`.
 - `nim test` passes.
 
 ## Remaining Work
@@ -28,20 +31,6 @@ This plan tracks only the work still worth doing after the initial port.
   if operator overloads are ambiguous in user code.
 - Add doc comments to exported types and procs so `nim doc` renders useful API
   docs.
-
-### Compatibility Coverage
-
-- Finish translating any upstream unit-test details not yet covered from:
-  - `VariableTest.cpp`
-  - `TermTest.cpp`
-  - `ExpressionTest.cpp`
-  - `ConstraintTest.cpp`
-  - `SolverTest.cpp`
-  - `SimplexTest.cpp`
-- Add a dedicated compile-only test for DSL examples that are likely to hit Nim
-  overload ambiguity.
-- Add tests for removing constraints and edit variables after multiple pivots.
-- Add tests for repeated `reset` and reuse of variables created before reset.
 
 ### Documentation
 

@@ -29,6 +29,10 @@ block variableNegMulDiv:
   doAssert mul.variable.sameVariable(variable)
   doAssert mul.coefficient == 2.KiwiScalar
 
+  let reverseMul = 2 * variable
+  doAssert reverseMul.variable.sameVariable(variable)
+  doAssert reverseMul.coefficient == 2.KiwiScalar
+
   let quotient = variable / 2
   doAssert quotient.variable.sameVariable(variable)
   doAssert quotient.coefficient == 0.5.KiwiScalar
@@ -41,17 +45,40 @@ block variableAdditionAndSubtraction:
   doAssert addConstant.constant == 2.KiwiScalar
   doAssert addConstant.len == 1
   doAssert addConstant.terms[0].variable.sameVariable(first)
+  doAssert addConstant.terms[0].coefficient == 1.KiwiScalar
+
+  let reverseAddConstant = 2 + first
+  doAssert reverseAddConstant.constant == 2.KiwiScalar
+  doAssert reverseAddConstant.len == 1
+  doAssert reverseAddConstant.terms[0].variable.sameVariable(first)
+  doAssert reverseAddConstant.terms[0].coefficient == 1.KiwiScalar
 
   let addVariable = first + second
   doAssert addVariable.constant == 0.KiwiScalar
   doAssert addVariable.len == 2
+  doAssert addVariable.terms[0].variable.sameVariable(first)
   doAssert addVariable.terms[0].coefficient == 1.KiwiScalar
+  doAssert addVariable.terms[1].variable.sameVariable(second)
   doAssert addVariable.terms[1].coefficient == 1.KiwiScalar
+
+  let subConstant = first - 2
+  doAssert subConstant.constant == -2.KiwiScalar
+  doAssert subConstant.len == 1
+  doAssert subConstant.terms[0].variable.sameVariable(first)
+  doAssert subConstant.terms[0].coefficient == 1.KiwiScalar
+
+  let reverseSubConstant = 2 - first
+  doAssert reverseSubConstant.constant == 2.KiwiScalar
+  doAssert reverseSubConstant.len == 1
+  doAssert reverseSubConstant.terms[0].variable.sameVariable(first)
+  doAssert reverseSubConstant.terms[0].coefficient == -1.KiwiScalar
 
   let subVariable = first - second
   doAssert subVariable.constant == 0.KiwiScalar
   doAssert subVariable.len == 2
+  doAssert subVariable.terms[0].variable.sameVariable(first)
   doAssert subVariable.terms[0].coefficient == 1.KiwiScalar
+  doAssert subVariable.terms[1].variable.sameVariable(second)
   doAssert subVariable.terms[1].coefficient == -1.KiwiScalar
 
 block variableComparisonCreatesConstraints:
