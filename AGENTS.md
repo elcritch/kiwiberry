@@ -3,7 +3,7 @@
 ## Project Structure & Modules
 - `src/`: Library modules. Keep the root module named after the package.
 - `tests/`: Unit tests using Nim's `unittest`; test files should start with `t`.
-- Root files: `nim_repo.nimble` for package metadata, `config.nims` for common compiler switches, and `README.md` for usage.
+- Root files: `kiwiberry.nimble` for package metadata, `config.nims` for common compiler switches, and `README.md` for usage.
 
 ## Build, Test, And Development
 - Install deps with Atlas: `atlas install`.

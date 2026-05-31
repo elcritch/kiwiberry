@@ -1,4 +1,4 @@
-# nim-repo
+# kiwiberry
 
 GitHub template repository for Nim packages using Atlas for dependency
 management and GitHub Actions for CI.
@@ -16,7 +16,7 @@ management and GitHub Actions for CI.
 ```
 
 That updates the starter package/module/test filenames and rewrites the
-remaining `nim_repo` / `nim-repo` references in the template files.
+remaining `kiwiberry` / `kiwiberry` references in the template files.
 
 ## Setup
 
@@ -48,4 +48,4 @@ nim r tests/tyour_package_name.nim
 - `config.nims`: shared Nim switches and the `nim test` task.
 - `.github/workflows/ci.yml`: GitHub Actions CI.
 - `scripts/rename_template.sh`: one-shot template bootstrap rename.
-# nim-repo
+# kiwiberry
