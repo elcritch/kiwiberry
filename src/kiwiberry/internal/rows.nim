@@ -1,14 +1,14 @@
-import std/[sequtils, tables]
+import std/tables
 
 import ../scalars
 import ./symbols
 
 type Row* = object
-  cells*: OrderedTable[Symbol, KiwiScalar]
+  cells*: Table[Symbol, KiwiScalar]
   constant*: KiwiScalar
 
 proc initRow*(constant: KiwiScalar = 0): Row =
-  Row(cells: initOrderedTable[Symbol, KiwiScalar](), constant: constant)
+  Row(cells: initTable[Symbol, KiwiScalar](), constant: constant)
 
 proc add*(row: var Row, value: KiwiScalar): KiwiScalar =
   row.constant += value
@@ -31,15 +31,15 @@ proc remove*(row: var Row, symbol: Symbol) =
 
 proc reverseSign*(row: var Row) =
   row.constant = -row.constant
-  for symbol in row.cells.keys.toSeq:
-    row.cells[symbol] = -row.cells[symbol]
+  for _, value in row.cells.mpairs:
+    value = -value
 
 proc solveFor*(row: var Row, symbol: Symbol) =
   let coeff = -1 / row.cells[symbol]
   row.cells.del(symbol)
   row.constant *= coeff
-  for cell in row.cells.keys.toSeq:
-    row.cells[cell] = row.cells[cell] * coeff
+  for _, value in row.cells.mpairs:
+    value *= coeff
 
 proc solveFor*(row: var Row, lhs, rhs: Symbol) =
   row.insert(lhs, -1)

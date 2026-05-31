@@ -16,8 +16,10 @@ type
 
 proc `==`*(a, b: SymbolId): bool {.borrow.}
 proc `<`*(a, b: SymbolId): bool {.borrow.}
-proc hash*(id: SymbolId): Hash {.borrow.}
 proc `$`*(id: SymbolId): string {.borrow.}
+
+proc hash*(id: SymbolId): Hash =
+  cast[Hash](uint64(id))
 
 proc initSymbol*(kind: SymbolKind = skInvalid, id: SymbolId = SymbolId(0)): Symbol =
   Symbol(kind: kind, id: id)

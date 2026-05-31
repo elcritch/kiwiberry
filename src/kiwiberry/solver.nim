@@ -17,7 +17,7 @@ type
 
   Solver* = object ## Incremental Cassowary solver state.
     constraints: OrderedTable[Constraint, Tag]
-    rows: OrderedTable[Symbol, Row]
+    rows: Table[Symbol, Row]
     vars: OrderedTable[VariableId, Symbol]
     variables: OrderedTable[VariableId, Variable]
     edits: OrderedTable[VariableId, EditInfo]
@@ -33,7 +33,7 @@ proc initSolver*(): Solver =
   ## Creates an empty value-style solver.
   Solver(
     constraints: initOrderedTable[Constraint, Tag](),
-    rows: initOrderedTable[Symbol, Row](),
+    rows: initTable[Symbol, Row](),
     vars: initOrderedTable[VariableId, Symbol](),
     variables: initOrderedTable[VariableId, Variable](),
     edits: initOrderedTable[VariableId, EditInfo](),
@@ -59,6 +59,15 @@ proc sortedRowKeys(solver: Solver): seq[Symbol] =
   result = solver.rows.keys.toSeq
   result.sort()
 
+proc preferSymbol(symbol, current: Symbol): bool =
+  current.isInvalid or symbol < current
+
+proc preferRatio(
+    symbol: Symbol, ratio: KiwiScalar, current: Symbol, currentRatio: KiwiScalar
+): bool =
+  ratio < currentRatio or
+    (not current.isInvalid and ratio == currentRatio and symbol < current)
+
 proc getVarSymbol(solver: var Solver, variable: Variable): Symbol =
   let id = variable.variableId
   if solver.vars.hasKey(id):
@@ -69,16 +78,16 @@ proc getVarSymbol(solver: var Solver, variable: Variable): Symbol =
   solver.variables[id] = variable
 
 proc allDummies(row: Row): bool =
-  for symbol in row.sortedKeys:
+  for symbol in row.cells.keys:
     if not symbol.isDummy:
       return false
   true
 
 proc anyPivotableSymbol(row: Row): Symbol =
-  for symbol in row.sortedKeys:
-    if symbol.isPivotable:
-      return symbol
-  initSymbol()
+  result = initSymbol()
+  for symbol in row.cells.keys:
+    if symbol.isPivotable and symbol.preferSymbol(result):
+      result = symbol
 
 proc substitute(solver: var Solver, symbol: Symbol, row: Row) =
   for key in solver.sortedRowKeys:
@@ -131,9 +140,13 @@ proc createRow(solver: var Solver, constraint: Constraint, tag: var Tag): Row =
     result.reverseSign()
 
 proc chooseSubject(row: Row, tag: Tag): Symbol =
-  for symbol in row.sortedKeys:
-    if symbol.isExternal:
-      return symbol
+  result = initSymbol()
+  for symbol in row.cells.keys:
+    if symbol.isExternal and symbol.preferSymbol(result):
+      result = symbol
+
+  if not result.isInvalid:
+    return result
 
   if tag.marker.isPivotable and row.coefficientFor(tag.marker) < 0:
     return tag.marker
@@ -141,35 +154,31 @@ proc chooseSubject(row: Row, tag: Tag): Symbol =
   if tag.other.isPivotable and row.coefficientFor(tag.other) < 0:
     return tag.other
 
-  initSymbol()
-
 proc getEnteringSymbol(objective: Row): Symbol =
-  for symbol in objective.sortedKeys:
-    let coefficient = objective.cells[symbol]
-    if not symbol.isDummy and coefficient < 0:
-      return symbol
-  initSymbol()
+  result = initSymbol()
+  for symbol, coefficient in objective.cells:
+    if not symbol.isDummy and coefficient < 0 and symbol.preferSymbol(result):
+      result = symbol
 
 proc getDualEnteringSymbol(solver: Solver, row: Row): Symbol =
   var ratio = float64.high.KiwiScalar
-  for symbol in row.sortedKeys:
-    let coefficient = row.cells[symbol]
+  result = initSymbol()
+  for symbol, coefficient in row.cells:
     if coefficient > 0 and not symbol.isDummy:
       let r = solver.objective.coefficientFor(symbol) / coefficient
-      if r < ratio:
+      if symbol.preferRatio(r, result, ratio):
         ratio = r
         result = symbol
 
 proc getLeavingRow(solver: Solver, entering: Symbol): Symbol =
   var ratio = float64.high.KiwiScalar
   result = initSymbol()
-  for symbol in solver.sortedRowKeys:
-    let row = solver.rows[symbol]
+  for symbol, row in solver.rows:
     if not symbol.isExternal:
       let temp = row.coefficientFor(entering)
       if temp < 0:
         let tempRatio = -row.constant / temp
-        if tempRatio < ratio:
+        if symbol.preferRatio(tempRatio, result, ratio):
           ratio = tempRatio
           result = symbol
 
@@ -181,20 +190,20 @@ proc getMarkerLeavingRow(solver: Solver, marker: Symbol): Symbol =
   var second = initSymbol()
   var third = initSymbol()
 
-  for symbol in solver.sortedRowKeys:
-    let row = solver.rows[symbol]
+  for symbol, row in solver.rows:
     let c = row.coefficientFor(marker)
     if c != 0:
       if symbol.isExternal:
-        third = symbol
+        if third.isInvalid or third < symbol:
+          third = symbol
       elif c < 0:
         let r = -row.constant / c
-        if r < r1:
+        if symbol.preferRatio(r, first, r1):
           r1 = r
           first = symbol
       else:
         let r = row.constant / c
-        if r < r2:
+        if symbol.preferRatio(r, second, r2):
           r2 = r
           second = symbol
 
@@ -432,12 +441,15 @@ proc reset*(solver: var Solver) =
 proc dumps*(solver: Solver): string =
   ## Returns a textual dump of the current solver internals.
   result.add "Objective\n---------\n"
-  for symbol, coefficient in solver.objective.cells:
+  for symbol in solver.objective.sortedKeys:
+    let coefficient = solver.objective.cells[symbol]
     result.add " + " & $coefficient & " * " & $symbol
   result.add "\n\nTableau\n-------\n"
-  for symbol, row in solver.rows:
+  for symbol in solver.sortedRowKeys:
+    let row = solver.rows[symbol]
     result.add $symbol & " |"
-    for cell, coefficient in row.cells:
+    for cell in row.sortedKeys:
+      let coefficient = row.cells[cell]
       result.add " + " & $coefficient & " * " & $cell
     result.add "\n"
   result.add "\nVariables\n---------\n"

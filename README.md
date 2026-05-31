@@ -165,6 +165,16 @@ constraint shape; `ge(10, x)` preserves `relGe` in the resulting constraint.
 nim test
 ```
 
+## Benchmark
+
+```sh
+KIWIBERRY_BENCH_ITERS=1000 nim c -d:release -r benchmarks/bgridview.nim
+
+c++ -O3 -DNDEBUG -std=c++17 -Ideps/kiwi \
+  benchmarks/bgridview_kiwi.cpp -o /tmp/bgridview_kiwi
+KIWIBERRY_BENCH_ITERS=1000 /tmp/bgridview_kiwi
+```
+
 ## License
 
 Kiwiberry uses BSD-3-Clause terms based on Kiwi's license. See `LICENSE`.
