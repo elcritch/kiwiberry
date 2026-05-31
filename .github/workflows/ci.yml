@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: '2.2.10'
+
+      - name: Cache Atlas deps
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: ${{ runner.os }}-atlas-${{ hashFiles('*.nimble') }}
+          restore-keys: |
+            ${{ runner.os }}-atlas-
+
+      - name: Add Atlas to PATH
+        run: echo "$HOME/.nimble/bin" >> "$GITHUB_PATH"
+
+      - name: Install Atlas
+        shell: bash
+        run: curl -fsSL https://raw.githubusercontent.com/nim-lang/atlas/HEAD/install.sh | bash -
+
+      - name: Check Atlas version
+        run: atlas -v
+
+      - name: Install dependencies
+        run: atlas install
+
+      - name: Run tests
+        run: nim test

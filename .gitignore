@@ -1,0 +1,24 @@
+*
+!*/
+!*.*
+
+# Atlas/Nim dependency and generated config state.
+deps/
+nim.cfg
+nimble.develop
+nimble.paths
+nimbledeps/
+
+# Nim build outputs.
+nimcache/
+.nimcache/
+*.out
+*.dSYM/
+tests/output/
+
+# Editor, OS, and tool noise.
+.DS_Store
+.tool-versions
+.env
+.env.*
+
