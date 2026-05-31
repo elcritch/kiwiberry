@@ -23,6 +23,9 @@ proc newVariable*(name = ""): Variable =
   result.nameValue = name
   inc nextVariableId
 
+proc vars*(name: string): Variable =
+  newVariable(name)
+
 proc variableId*(variable: Variable): VariableId =
   variable.id
 

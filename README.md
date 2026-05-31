@@ -27,6 +27,15 @@ doAssert x.value == 7.KiwiScalar
 doAssert y.value == 3.KiwiScalar
 ```
 
+Literal helpers are also available:
+
+```nim
+let x = vars"x"
+let y = vars"y"
+
+solver.addConstraint(x + y == 10)
+```
+
 ## Edit Variables
 
 ```nim

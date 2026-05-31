@@ -11,6 +11,15 @@ block variableMethods:
   variable.value = 3.5
   doAssert variable.value == 3.5.KiwiScalar
 
+block variableLiteralHelpers:
+  let short = vars"foo"
+  doAssert short.name == "foo"
+  doAssert short.value == 0.KiwiScalar
+
+  let explicit = vars"bar"
+  doAssert explicit.name == "bar"
+  doAssert not short.sameVariable(explicit)
+
 block variableIdentity:
   let first = newVariable("x")
   let second = newVariable("x")
