@@ -23,6 +23,8 @@ This plan tracks only the work still worth doing after the initial port.
 - The public API includes both value solvers (`initSolver`) and optional ref
   solvers (`newSolver`), plus named constraint constructors `le`, `ge`, and
   `eq`.
+- Solver helper aliases support `solver[variable] = strength`,
+  `solver.constraint(...)`, `solver.suggest(...)`, and `solver.update()`.
 - The variable literal helper is `vars"x"` and is covered by native and
   JavaScript tests.
 - `tests/tsolver.nim` passes in debug, release, and danger modes.

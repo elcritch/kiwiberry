@@ -2,14 +2,25 @@ import std/assertions
 
 import kiwiberry
 
-block basicExample:
+block preferredExample:
   var solver = initSolver()
-  let x = newVariable("x")
-  let y = newVariable("y")
+  let width = vars"width"
 
-  solver.addConstraint(x + y == 10)
-  solver.addConstraint(x - y == 4)
-  solver.updateVariables()
+  solver[width] = Strong
+  solver.constraint(width >= 100)
+  solver.suggest(width, 240)
+  solver.update()
+
+  doAssert width.value == 240.KiwiScalar
+
+block basicConstraints:
+  var solver = initSolver()
+  let x = vars"x"
+  let y = vars"y"
+
+  solver.constraint(x + y == 10)
+  solver.constraint(x - y == 4)
+  solver.update()
 
   doAssert x.value == 7.KiwiScalar
   doAssert y.value == 3.KiwiScalar
@@ -18,8 +29,8 @@ block refSolverExample:
   let solver = newSolver()
   let x = vars"x"
 
-  solver.addConstraint(x >= 10)
-  solver.updateVariables()
+  solver.constraint(x >= 10)
+  solver.update()
 
   doAssert x.value == 10.KiwiScalar
 
@@ -28,15 +39,15 @@ block namedConstructors:
   let x = vars"x"
   let y = vars"y"
 
-  solver.addConstraint(le(x + y, 10))
-  solver.addConstraint(ge(x, 0))
-  solver.addConstraint(eq(y, x + 2))
-  solver.updateVariables()
+  solver.constraint(le(x + y, 10))
+  solver.constraint(ge(x, 0))
+  solver.constraint(eq(y, x + 2))
+  solver.update()
 
   doAssert x.value == 0.KiwiScalar
   doAssert y.value == 2.KiwiScalar
 
-block editVariables:
+block explicitLongNames:
   var solver = initSolver()
   let width = newVariable("width")
 
@@ -51,10 +62,10 @@ block strengths:
   var solver = initSolver()
   let width = newVariable("width")
 
-  solver.addConstraint(width >= 100)
-  solver.addConstraint((width == 320) | Weak)
-  solver.addConstraint((width >= 100).withStrength(Strong))
-  solver.updateVariables()
+  solver.constraint(width >= 100)
+  solver.constraint((width == 320) | Weak)
+  solver.constraint((width >= 100).withStrength(Strong))
+  solver.update()
 
   doAssert width.value == 320.KiwiScalar
 

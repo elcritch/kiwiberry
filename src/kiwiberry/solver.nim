@@ -433,6 +433,22 @@ proc dump*(solver: Solver) =
   ## Writes a textual dump of the current solver internals to stdout.
   echo solver.dumps
 
+proc `[]=`*(solver: var Solver, variable: Variable, strength: Strength) =
+  ## Adds `variable` as an edit variable with `strength`.
+  solver.addEditVariable(variable, strength)
+
+proc constraint*(solver: var Solver, constraint: Constraint) =
+  ## Adds `constraint` to `solver`.
+  solver.addConstraint(constraint)
+
+proc suggest*(solver: var Solver, variable: Variable, value: KiwiScalar) =
+  ## Suggests `value` for an edit variable.
+  solver.suggestValue(variable, value)
+
+proc update*(solver: var Solver) =
+  ## Writes solved values back into variables known to `solver`.
+  solver.updateVariables()
+
 proc addConstraint*(solver: SolverRef, constraint: Constraint) =
   ## Adds `constraint` to a ref-style solver.
   solver[].addConstraint(constraint)
@@ -476,3 +492,19 @@ proc dumps*(solver: SolverRef): string =
 proc dump*(solver: SolverRef) =
   ## Writes a textual dump from a ref-style solver to stdout.
   solver[].dump()
+
+proc `[]=`*(solver: SolverRef, variable: Variable, strength: Strength) =
+  ## Adds `variable` as an edit variable on a ref-style solver.
+  solver[].addEditVariable(variable, strength)
+
+proc constraint*(solver: SolverRef, constraint: Constraint) =
+  ## Adds `constraint` to a ref-style solver.
+  solver[].addConstraint(constraint)
+
+proc suggest*(solver: SolverRef, variable: Variable, value: KiwiScalar) =
+  ## Suggests `value` for an edit variable on a ref-style solver.
+  solver[].suggestValue(variable, value)
+
+proc update*(solver: SolverRef) =
+  ## Writes solved values back into variables known to a ref-style solver.
+  solver[].updateVariables()

@@ -85,6 +85,28 @@ block suggestingValues:
 
   doAssert variable.value.closeTo(2)
 
+block ergonomicValueSolver:
+  var solver = initSolver()
+  let width = vars"width"
+
+  solver[width] = Strong
+  solver.constraint(width >= 100)
+  solver.suggest(width, 240)
+  solver.update()
+
+  doAssert width.value.closeTo(240)
+
+block ergonomicRefSolver:
+  let solver = newSolver()
+  let width = vars"refWidth"
+
+  solver[width] = Strong
+  solver.constraint(width >= 100)
+  solver.suggest(width, 240)
+  solver.update()
+
+  doAssert width.value.closeTo(240)
+
 block suggestingValuesAcrossRows:
   var solver = initSolver()
   let first = newVariable("foo")
