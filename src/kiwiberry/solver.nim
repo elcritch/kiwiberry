@@ -277,6 +277,19 @@ proc removeConstraintEffects(solver: var Solver, constraint: Constraint, tag: Ta
   if tag.other.kind == skError:
     solver.removeMarkerEffects(tag.other, constraint.strength)
 
+proc findConstraint(solver: Solver, constraint: Constraint): Constraint =
+  if constraint.isNil:
+    return nil
+
+  if solver.constraints.hasKey(constraint):
+    return constraint
+
+  for existing in solver.constraints.keys:
+    if existing.sameShape(constraint):
+      return existing
+
+  nil
+
 proc addConstraint*(solver: var Solver, constraint: Constraint) =
   ## Adds `constraint` to `solver`.
   ##
@@ -309,13 +322,16 @@ proc addConstraint*(solver: var Solver, constraint: Constraint) =
 proc removeConstraint*(solver: var Solver, constraint: Constraint) =
   ## Removes `constraint` from `solver`.
   ##
-  ## Raises `UnknownConstraintError` when the constraint has not been added.
-  if not solver.constraints.hasKey(constraint):
+  ## The lookup accepts the same constraint identity or a structurally equivalent
+  ## constraint. Raises `UnknownConstraintError` when no matching constraint has
+  ## been added.
+  let storedConstraint = solver.findConstraint(constraint)
+  if storedConstraint.isNil:
     raiseUnknownConstraint(constraint)
 
-  let tag = solver.constraints[constraint]
-  solver.constraints.del(constraint)
-  solver.removeConstraintEffects(constraint, tag)
+  let tag = solver.constraints[storedConstraint]
+  solver.constraints.del(storedConstraint)
+  solver.removeConstraintEffects(storedConstraint, tag)
 
   if solver.rows.hasKey(tag.marker):
     solver.rows.del(tag.marker)
@@ -332,8 +348,8 @@ proc removeConstraint*(solver: var Solver, constraint: Constraint) =
   solver.optimize(solver.objective)
 
 proc hasConstraint*(solver: Solver, constraint: Constraint): bool =
-  ## Returns true when `constraint` has been added to `solver`.
-  solver.constraints.hasKey(constraint)
+  ## Returns true when `constraint` or a structurally equivalent constraint has been added.
+  not solver.findConstraint(constraint).isNil
 
 proc addEditVariable*(solver: var Solver, variable: Variable, strength: Strength) =
   ## Adds `variable` as an editable variable with a non-required strength.

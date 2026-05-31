@@ -75,7 +75,29 @@ proc strength*(constraint: Constraint): Strength =
 
 proc sameConstraint*(a, b: Constraint): bool =
   ## Returns true when both handles refer to the same constraint identity.
-  a != nil and b != nil and a.id == b.id
+  not a.isNil and not b.isNil and a.id == b.id
+
+proc sameExpressionShape(a, b: Expression): bool =
+  if a.constant != b.constant or a.len != b.len:
+    return false
+
+  for left in a:
+    var found = false
+    for right in b:
+      if left.variable.sameVariable(right.variable):
+        if left.coefficient != right.coefficient:
+          return false
+        found = true
+        break
+    if not found:
+      return false
+
+  true
+
+proc sameShape*(a, b: Constraint): bool =
+  ## Returns true when two constraints have the same expression, relation, and strength.
+  not a.isNil and not b.isNil and a.relation == b.relation and a.strength == b.strength and
+    sameExpressionShape(a.expression, b.expression)
 
 proc `==`*(a, b: Constraint): bool =
   ## Compares constraint identity, not structural equality.

@@ -57,7 +57,8 @@ Keep the returned constraint when a dynamic layout needs to remove it later:
 let minWidth = solver.constraint(width >= 100)
 
 doAssert solver.has(minWidth)
-solver.remove(minWidth)
+doAssert solver.has(width >= 100)
+solver.remove(width >= 100)
 doAssert not solver.has(minWidth)
 
 solver.remove(width)

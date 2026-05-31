@@ -28,6 +28,20 @@ block constraintReduction:
   doAssert constraint.expression.len == 1
   doAssert constraint.expression.terms[0].coefficient == 2.KiwiScalar
 
+block constraintShape:
+  let width = newVariable("width")
+  let height = newVariable("height")
+
+  let first = width + height >= 100
+  let second = height + width >= 100
+  let differentRelation = width + height <= 100
+  let differentStrength = (width + height >= 100) | Weak
+
+  doAssert not first.sameConstraint(second)
+  doAssert first.sameShape(second)
+  doAssert not first.sameShape(differentRelation)
+  doAssert not first.sameShape(differentStrength)
+
 block namedConstraintConstructors:
   let first = newVariable("foo")
   let second = newVariable("bar")
