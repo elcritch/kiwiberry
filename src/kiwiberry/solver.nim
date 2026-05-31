@@ -1,9 +1,9 @@
 ## Public solver API.
 
-import std/[algorithm, tables]
+import std/tables
 
 import ./[constraints, errors, expressions, scalars, strengths, variables]
-import ./internal/[rows, symbols]
+import ./internal/[assocmaps, rows, symbols]
 
 type
   Tag = object
@@ -15,11 +15,14 @@ type
     constraint: Constraint
     constant: KiwiScalar
 
+  VarInfo = object
+    symbol: Symbol
+    variable: Variable
+
   Solver* = object ## Incremental Cassowary solver state.
     constraints: OrderedTable[Constraint, Tag]
-    rows: Table[Symbol, Row]
-    vars: OrderedTable[VariableId, Symbol]
-    variables: OrderedTable[VariableId, Variable]
+    rows: AssocMap[Symbol, Row]
+    vars: AssocMap[VariableId, VarInfo]
     edits: OrderedTable[VariableId, EditInfo]
     infeasibleRows: seq[Symbol]
     objective: Row
@@ -33,9 +36,8 @@ proc initSolver*(): Solver =
   ## Creates an empty value-style solver.
   Solver(
     constraints: initOrderedTable[Constraint, Tag](),
-    rows: initTable[Symbol, Row](),
-    vars: initOrderedTable[VariableId, Symbol](),
-    variables: initOrderedTable[VariableId, Variable](),
+    rows: initAssocMap[Symbol, Row](),
+    vars: initAssocMap[VariableId, VarInfo](),
     edits: initOrderedTable[VariableId, EditInfo](),
     objective: initRow(),
     artificial: initRow(),
@@ -55,13 +57,6 @@ proc sortedKeys(row: Row): seq[Symbol] =
   result = newSeqOfCap[Symbol](row.cells.len)
   for symbol in row.cells.keys:
     result.add symbol
-  result.sort()
-
-proc sortedRowKeys(solver: Solver): seq[Symbol] =
-  result = newSeqOfCap[Symbol](solver.rows.len)
-  for symbol in solver.rows.keys:
-    result.add symbol
-  result.sort()
 
 proc preferSymbol(symbol, current: Symbol): bool =
   current.isInvalid or symbol < current
@@ -74,12 +69,11 @@ proc preferRatio(
 
 proc getVarSymbol(solver: var Solver, variable: Variable): Symbol =
   let id = variable.variableId
-  if solver.vars.hasKey(id):
-    return solver.vars[id]
+  solver.vars.withValue(id, info):
+    return info[].symbol
 
   result = solver.newSymbol(skExternal)
-  solver.vars[id] = result
-  solver.variables[id] = variable
+  solver.vars[id] = VarInfo(symbol: result, variable: variable)
 
 proc allDummies(row: Row): bool =
   for symbol in row.cells.keys:
@@ -94,11 +88,10 @@ proc anyPivotableSymbol(row: Row): Symbol =
       result = symbol
 
 proc substitute(solver: var Solver, symbol: Symbol, row: Row) =
-  for key in solver.sortedRowKeys:
-    solver.rows.withValue(key, current):
-      current[].substitute(symbol, row)
-      if not key.isExternal and current[].constant < 0:
-        solver.infeasibleRows.add key
+  for key, current in solver.rows.mpairs:
+    current.substitute(symbol, row)
+    if not key.isExternal and current.constant < 0:
+      solver.infeasibleRows.add key
 
   solver.objective.substitute(symbol, row)
   if solver.hasArtificial:
@@ -234,8 +227,8 @@ proc optimize(solver: var Solver, objective: Row) =
     if leaving.isInvalid:
       raiseInternalSolverError("The objective is unbounded.")
 
-    var row = solver.rows[leaving]
-    solver.rows.del(leaving)
+    var row: Row
+    discard solver.rows.pop(leaving, row)
     row.solveFor(leaving, entering)
     solver.substitute(entering, row)
     solver.rows[entering] = row
@@ -250,8 +243,8 @@ proc dualOptimize(solver: var Solver) =
       if entering.isInvalid:
         raiseInternalSolverError("Dual optimize failed.")
 
-      var row = solver.rows[leaving]
-      solver.rows.del(leaving)
+      var row: Row
+      discard solver.rows.pop(leaving, row)
       row.solveFor(leaving, entering)
       solver.substitute(entering, row)
       solver.rows[entering] = row
@@ -280,9 +273,8 @@ proc addWithArtificialVariable(solver: var Solver, row: Row): bool =
     solver.substitute(entering, row)
     solver.rows[entering] = row
 
-  for symbol in solver.sortedRowKeys:
-    solver.rows.withValue(symbol, current):
-      current[].remove(art)
+  for _, current in solver.rows.mpairs:
+    current.remove(art)
   solver.objective.remove(art)
 
 proc removeMarkerEffects(solver: var Solver, marker: Symbol, strength: Strength) =
@@ -362,8 +354,8 @@ proc removeConstraint*(solver: var Solver, constraint: Constraint) =
     if leaving.isInvalid:
       raiseInternalSolverError("failed to find leaving row")
 
-    var row = solver.rows[leaving]
-    solver.rows.del(leaving)
+    var row: Row
+    discard solver.rows.pop(leaving, row)
     row.solveFor(leaving, tag.marker)
     solver.substitute(tag.marker, row)
 
@@ -430,24 +422,22 @@ proc suggestValue*(solver: var Solver, variable: Variable, value: KiwiScalar) =
     solver.dualOptimize()
     return
 
-  for symbol in solver.sortedRowKeys:
-    solver.rows.withValue(symbol, row):
-      if row[].addProductFor(info.tag.marker, delta) and row[].constant < 0 and
-          not symbol.isExternal:
-        solver.infeasibleRows.add symbol
+  for symbol, row in solver.rows.mpairs:
+    if row.addProductFor(info.tag.marker, delta) and row.constant < 0 and
+        not symbol.isExternal:
+      solver.infeasibleRows.add symbol
 
   solver.dualOptimize()
 
 proc updateVariables*(solver: var Solver) =
   ## Writes solved values back into all external variables known to `solver`.
-  for id, variable in solver.variables:
-    let symbol = solver.vars[id]
+  for _, info in solver.vars:
     var updated = false
-    solver.rows.withValue(symbol, row):
-      variable.value = row[].constant
+    solver.rows.withValue(info.symbol, row):
+      info.variable.value = row[].constant
       updated = true
     if not updated:
-      variable.value = 0
+      info.variable.value = 0
 
 proc reset*(solver: var Solver) =
   ## Resets the solver to the empty starting state.
@@ -460,7 +450,7 @@ proc dumps*(solver: Solver): string =
     let coefficient = solver.objective.cells[symbol]
     result.add " + " & $coefficient & " * " & $symbol
   result.add "\n\nTableau\n-------\n"
-  for symbol in solver.sortedRowKeys:
+  for symbol in solver.rows.keys:
     let row = solver.rows[symbol]
     result.add $symbol & " |"
     for cell in row.sortedKeys:
@@ -468,8 +458,8 @@ proc dumps*(solver: Solver): string =
       result.add " + " & $coefficient & " * " & $cell
     result.add "\n"
   result.add "\nVariables\n---------\n"
-  for id, symbol in solver.vars:
-    result.add $solver.variables[id].name & " = " & $symbol & "\n"
+  for _, info in solver.vars:
+    result.add $info.variable.name & " = " & $info.symbol & "\n"
   result.add "\nConstraints\n-----------\n"
   result.add $solver.constraints.len & "\n"
 
