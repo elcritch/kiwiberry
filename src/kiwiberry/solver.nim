@@ -1,6 +1,6 @@
 ## Public solver API.
 
-import std/[algorithm, sequtils, tables]
+import std/[algorithm, tables]
 
 import ./[constraints, errors, expressions, scalars, strengths, variables]
 import ./internal/[rows, symbols]
@@ -52,11 +52,15 @@ proc newSymbol(solver: var Solver, kind: SymbolKind): Symbol =
   inc solver.idTick
 
 proc sortedKeys(row: Row): seq[Symbol] =
-  result = row.cells.keys.toSeq
+  result = newSeqOfCap[Symbol](row.cells.len)
+  for symbol in row.cells.keys:
+    result.add symbol
   result.sort()
 
 proc sortedRowKeys(solver: Solver): seq[Symbol] =
-  result = solver.rows.keys.toSeq
+  result = newSeqOfCap[Symbol](solver.rows.len)
+  for symbol in solver.rows.keys:
+    result.add symbol
   result.sort()
 
 proc preferSymbol(symbol, current: Symbol): bool =

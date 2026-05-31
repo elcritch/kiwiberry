@@ -14,32 +14,39 @@ proc add*(row: var Row, value: KiwiScalar): KiwiScalar =
   row.constant = KiwiScalar(row.constant.float64 + value.float64)
   row.constant
 
-proc addCell(row: var Row, symbol: Symbol, coefficient: float64) =
-  var removeCell = false
-  row.cells.withValue(symbol, cell):
-    let value = cell[].float64 + coefficient
-    cell[] = KiwiScalar(value)
-    removeCell = abs(value) < 1.0e-8
-  do:
-    if abs(coefficient) >= 1.0e-8:
-      row.cells[symbol] = KiwiScalar(coefficient)
-
-  if removeCell:
-    row.cells.del(symbol)
-
 proc addProductFor*(row: var Row, symbol: Symbol, value: KiwiScalar): bool =
   row.cells.withValue(symbol, coefficient):
     discard row.add(KiwiScalar(value.float64 * coefficient[].float64))
     result = true
 
 proc insert*(row: var Row, symbol: Symbol, coefficient: KiwiScalar = 1.KiwiScalar) =
-  row.addCell(symbol, coefficient.float64)
+  let delta = coefficient.float64
+  var removeCell = false
+  row.cells.withValue(symbol, cell):
+    cell[] = KiwiScalar(cell[].float64 + delta)
+    removeCell = abs(cell[].float64) < 1.0e-8
+  do:
+    if abs(delta) >= 1.0e-8:
+      row.cells[symbol] = coefficient
+
+  if removeCell:
+    row.cells.del(symbol)
 
 proc insert*(row: var Row, other: Row, coefficient: KiwiScalar = 1.KiwiScalar) =
   let scale = coefficient.float64
   row.constant = KiwiScalar(row.constant.float64 + other.constant.float64 * scale)
   for symbol, value in other.cells:
-    row.addCell(symbol, value.float64 * scale)
+    var removeCell = false
+    let delta = value.float64 * scale
+    row.cells.withValue(symbol, cell):
+      cell[] = KiwiScalar(cell[].float64 + delta)
+      removeCell = abs(cell[].float64) < 1.0e-8
+    do:
+      if abs(delta) >= 1.0e-8:
+        row.cells[symbol] = KiwiScalar(delta)
+
+    if removeCell:
+      row.cells.del(symbol)
 
 proc remove*(row: var Row, symbol: Symbol) =
   row.cells.del(symbol)
