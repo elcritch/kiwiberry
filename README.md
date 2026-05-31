@@ -7,7 +7,7 @@ which is the style of solver commonly used for interactive UI layout.
 ## Install
 
 ```sh
-atlas install
+atlas use https://github.com/elcritch/kiwiberry
 ```
 
 ## Example
