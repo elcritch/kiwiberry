@@ -1,6 +1,6 @@
 ## Constraint construction and query API.
 
-import std/[hashes, tables]
+import std/hashes
 when not defined(js):
   import std/atomics
 
@@ -33,20 +33,28 @@ else:
     nextConstraintId.fetchAdd(1)
 
 proc reduce(expression: Expression): Expression =
-  var reduced = initOrderedTable[VariableId, Term]()
-  for term in expression:
-    let id = term.variable.variableId
-    if reduced.hasKey(id):
-      let old = reduced[id]
-      reduced[id] = initTerm(old.variable, old.coefficient + term.coefficient)
-    else:
-      reduced[id] = term
+  let expressionTerms = expression.terms
+  var terms = newSeqOfCap[Term](expressionTerms.len)
 
-  var terms = newSeq[Term]()
-  for term in reduced.values:
-    if not term.coefficient.nearZero:
+  for index in 0 ..< expressionTerms.len:
+    let term {.cursor.} = expressionTerms[index]
+    let id = term.variable.variableId
+    var found = false
+    for existingIndex in 0 ..< terms.len:
+      if terms[existingIndex].variable.variableId == id:
+        let variable = terms[existingIndex].variable
+        let coefficient = terms[existingIndex].coefficient + term.coefficient
+        terms[existingIndex] = initTerm(variable, coefficient)
+        found = true
+        break
+    if not found:
       terms.add term
-  initExpression(terms, expression.constant)
+
+  var compactTerms = newSeqOfCap[Term](terms.len)
+  for term in terms:
+    if not term.coefficient.nearZero:
+      compactTerms.add term
+  initExpression(compactTerms, expression.constant)
 
 proc newConstraint*(
     expression: Expression, relation: Relation, strength: Strength = Required

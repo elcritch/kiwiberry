@@ -38,7 +38,7 @@ proc toExpression*(constant: KiwiScalar): Expression =
   ## Converts a constant to an expression with no terms.
   initExpression(constant = constant)
 
-proc variable*(term: Term): Variable =
+proc variable*(term: Term): lent Variable =
   ## Returns the variable used by `term`.
   term.variableValue
 
@@ -62,9 +62,9 @@ proc len*(expression: Expression): int =
   ## Returns the number of terms in the expression.
   expression.termsValue.len
 
-iterator items*(expression: Expression): Term =
-  for term in expression.termsValue:
-    yield term
+iterator items*(expression: Expression): lent Term =
+  for index in 0 ..< expression.termsValue.len:
+    yield expression.termsValue[index]
 
 proc value*(expression: Expression): KiwiScalar =
   ## Evaluates the expression using current variable values.

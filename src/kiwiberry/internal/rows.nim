@@ -1,67 +1,46 @@
-import std/tables
-
 import ../scalars
-import ./symbols
+import ./[cellmaps, symbols]
+
+export cellmaps
 
 type Row* = object
-  cells*: Table[Symbol, KiwiScalar]
+  cells*: CellMap
   constant*: KiwiScalar
 
 proc initRow*(constant: KiwiScalar = 0.KiwiScalar): Row =
-  Row(cells: initTable[Symbol, KiwiScalar](), constant: constant)
+  Row(cells: initCellMap(), constant: constant)
 
 proc add*(row: var Row, value: KiwiScalar): KiwiScalar =
-  row.constant = KiwiScalar(row.constant.float64 + value.float64)
+  row.constant += value
   row.constant
 
 proc addProductFor*(row: var Row, symbol: Symbol, value: KiwiScalar): bool =
   row.cells.withValue(symbol, coefficient):
-    discard row.add(KiwiScalar(value.float64 * coefficient[].float64))
+    discard row.add(value * coefficient[])
     result = true
 
 proc insert*(row: var Row, symbol: Symbol, coefficient: KiwiScalar = 1.KiwiScalar) =
-  let delta = coefficient.float64
-  var removeCell = false
-  row.cells.withValue(symbol, cell):
-    cell[] = KiwiScalar(cell[].float64 + delta)
-    removeCell = abs(cell[].float64) < 1.0e-8
-  do:
-    if abs(delta) >= 1.0e-8:
-      row.cells[symbol] = coefficient
-
-  if removeCell:
-    row.cells.del(symbol)
+  row.cells.add(symbol, coefficient)
 
 proc insert*(row: var Row, other: Row, coefficient: KiwiScalar = 1.KiwiScalar) =
-  let scale = coefficient.float64
-  row.constant = KiwiScalar(row.constant.float64 + other.constant.float64 * scale)
+  row.constant += other.constant * coefficient
   for symbol, value in other.cells:
-    var removeCell = false
-    let delta = value.float64 * scale
-    row.cells.withValue(symbol, cell):
-      cell[] = KiwiScalar(cell[].float64 + delta)
-      removeCell = abs(cell[].float64) < 1.0e-8
-    do:
-      if abs(delta) >= 1.0e-8:
-        row.cells[symbol] = KiwiScalar(delta)
-
-    if removeCell:
-      row.cells.del(symbol)
+    row.cells.add(symbol, value * coefficient)
 
 proc remove*(row: var Row, symbol: Symbol) =
   row.cells.del(symbol)
 
 proc reverseSign*(row: var Row) =
-  row.constant = KiwiScalar(-row.constant.float64)
+  row.constant = -row.constant
   for _, value in row.cells.mpairs:
-    value = KiwiScalar(-value.float64)
+    value = -value
 
 proc solveFor*(row: var Row, symbol: Symbol) =
-  let coeff = KiwiScalar(-1.0 / row.cells[symbol].float64)
+  let coeff = -1.KiwiScalar / row.cells[symbol]
   row.cells.del(symbol)
-  row.constant = KiwiScalar(row.constant.float64 * coeff.float64)
+  row.constant *= coeff
   for _, value in row.cells.mpairs:
-    value = KiwiScalar(value.float64 * coeff.float64)
+    value *= coeff
 
 proc solveFor*(row: var Row, lhs, rhs: Symbol) =
   row.insert(lhs, KiwiScalar(-1.0))

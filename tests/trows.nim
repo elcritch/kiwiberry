@@ -1,5 +1,4 @@
 import std/assertions
-import std/tables
 
 import kiwiberry
 import kiwiberry/internal/[rows, symbols]

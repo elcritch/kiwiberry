@@ -100,7 +100,9 @@ proc substitute(solver: var Solver, symbol: Symbol, row: Row) =
 proc createRow(solver: var Solver, constraint: Constraint, tag: var Tag): Row =
   result = initRow(constraint.expression.constant)
 
-  for term in constraint.expression:
+  let terms = constraint.expression.terms
+  for index in 0 ..< terms.len:
+    let term {.cursor.} = terms[index]
     if abs(term.coefficient.float64) >= 1.0e-8:
       let symbol = solver.getVarSymbol(term.variable)
       solver.rows.withValue(symbol, existing):
@@ -431,13 +433,15 @@ proc suggestValue*(solver: var Solver, variable: Variable, value: KiwiScalar) =
 
 proc updateVariables*(solver: var Solver) =
   ## Writes solved values back into all external variables known to `solver`.
-  for _, info in solver.vars:
+  for _, info in solver.vars.mpairs:
     var updated = false
     solver.rows.withValue(info.symbol, row):
-      info.variable.value = row[].constant
+      if info.variable.value != row[].constant:
+        info.variable.value = row[].constant
       updated = true
     if not updated:
-      info.variable.value = 0
+      if info.variable.value != 0:
+        info.variable.value = 0
 
 proc reset*(solver: var Solver) =
   ## Resets the solver to the empty starting state.

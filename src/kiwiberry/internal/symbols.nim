@@ -18,34 +18,36 @@ proc `==`*(a, b: SymbolId): bool {.borrow.}
 proc `<`*(a, b: SymbolId): bool {.borrow.}
 proc `$`*(id: SymbolId): string {.borrow.}
 
-proc hash*(id: SymbolId): Hash =
+proc hash*(id: SymbolId): Hash {.inline.} =
   cast[Hash](uint64(id))
 
-proc initSymbol*(kind: SymbolKind = skInvalid, id: SymbolId = SymbolId(0)): Symbol =
+proc initSymbol*(
+    kind: SymbolKind = skInvalid, id: SymbolId = SymbolId(0)
+): Symbol {.inline.} =
   Symbol(kind: kind, id: id)
 
-proc isInvalid*(symbol: Symbol): bool =
+proc isInvalid*(symbol: Symbol): bool {.inline.} =
   symbol.kind == skInvalid
 
-proc isExternal*(symbol: Symbol): bool =
+proc isExternal*(symbol: Symbol): bool {.inline.} =
   symbol.kind == skExternal
 
-proc isRestricted*(symbol: Symbol): bool =
+proc isRestricted*(symbol: Symbol): bool {.inline.} =
   symbol.kind in {skSlack, skError, skDummy}
 
-proc isDummy*(symbol: Symbol): bool =
+proc isDummy*(symbol: Symbol): bool {.inline.} =
   symbol.kind == skDummy
 
-proc isPivotable*(symbol: Symbol): bool =
+proc isPivotable*(symbol: Symbol): bool {.inline.} =
   symbol.kind in {skSlack, skError}
 
-proc `==`*(a, b: Symbol): bool =
+proc `==`*(a, b: Symbol): bool {.inline.} =
   a.id == b.id
 
-proc `<`*(a, b: Symbol): bool =
+proc `<`*(a, b: Symbol): bool {.inline.} =
   a.id < b.id
 
-proc hash*(symbol: Symbol): Hash =
+proc hash*(symbol: Symbol): Hash {.inline.} =
   hash(symbol.id)
 
 proc `$`*(symbol: Symbol): string =

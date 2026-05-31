@@ -1,5 +1,3 @@
-import std/algorithm
-
 type
   AssocEntry[K, V] = object
     key: K
@@ -8,57 +6,57 @@ type
   AssocMap*[K, V] = object
     entries: seq[AssocEntry[K, V]]
 
-proc cmpEntryKey[K, V](entry: AssocEntry[K, V], key: K): int =
-  if entry.key < key:
-    -1
-  elif key < entry.key:
-    1
-  else:
-    0
+proc lowerIndex[K, V](map: AssocMap[K, V], key: K): int {.inline.} =
+  var low = 0
+  var high = map.entries.len
+  while low < high:
+    let mid = (low + high) shr 1
+    if map.entries[mid].key < key:
+      low = mid + 1
+    else:
+      high = mid
+  low
 
-proc lowerIndex[K, V](map: AssocMap[K, V], key: K): int =
-  lowerBound(map.entries, key, cmpEntryKey[K, V])
-
-proc findIndex[K, V](map: AssocMap[K, V], key: K): int =
+proc findIndex[K, V](map: AssocMap[K, V], key: K): int {.inline.} =
   result = map.lowerIndex(key)
   if result >= map.entries.len or map.entries[result].key != key:
     result = -1
 
-proc initAssocMap*[K, V](): AssocMap[K, V] =
+proc initAssocMap*[K, V](): AssocMap[K, V] {.inline.} =
   AssocMap[K, V](entries: @[])
 
-proc len*[K, V](map: AssocMap[K, V]): int =
+proc len*[K, V](map: AssocMap[K, V]): int {.inline.} =
   map.entries.len
 
-proc hasKey*[K, V](map: AssocMap[K, V], key: K): bool =
+proc hasKey*[K, V](map: AssocMap[K, V], key: K): bool {.inline.} =
   map.findIndex(key) >= 0
 
-proc `[]`*[K, V](map: AssocMap[K, V], key: K): V =
+proc `[]`*[K, V](map: AssocMap[K, V], key: K): V {.inline.} =
   let index = map.findIndex(key)
   if index < 0:
     raise newException(KeyError, "key not found")
   map.entries[index].val
 
-proc `[]=`*[K, V](map: var AssocMap[K, V], key: K, value: sink V) =
+proc `[]=`*[K, V](map: var AssocMap[K, V], key: K, value: sink V) {.inline.} =
   let index = map.lowerIndex(key)
   if index < map.entries.len and map.entries[index].key == key:
     map.entries[index].val = value
   else:
     map.entries.insert(AssocEntry[K, V](key: key, val: value), index)
 
-proc del*[K, V](map: var AssocMap[K, V], key: K) =
+proc del*[K, V](map: var AssocMap[K, V], key: K) {.inline.} =
   let index = map.findIndex(key)
   if index >= 0:
     map.entries.delete(index)
 
-proc pop*[K, V](map: var AssocMap[K, V], key: K, value: var V): bool =
+proc pop*[K, V](map: var AssocMap[K, V], key: K, value: var V): bool {.inline.} =
   let index = map.findIndex(key)
   if index >= 0:
     value = move map.entries[index].val
     map.entries.delete(index)
     result = true
 
-proc getOrDefault*[K, V](map: AssocMap[K, V], key: K, default: V): V =
+proc getOrDefault*[K, V](map: AssocMap[K, V], key: K, default: V): V {.inline.} =
   let index = map.findIndex(key)
   if index >= 0:
     map.entries[index].val

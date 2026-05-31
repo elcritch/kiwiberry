@@ -43,11 +43,11 @@ proc vars*(name: string): Variable =
   ## Creates a new variable from a custom string literal, e.g. `vars"x"`.
   newVariable(name)
 
-proc variableId*(variable: Variable): VariableId =
+proc variableId*(variable: Variable): VariableId {.inline.} =
   ## Returns the identity assigned to `variable`.
   variable.id
 
-proc sameVariable*(a, b: Variable): bool =
+proc sameVariable*(a, b: Variable): bool {.inline.} =
   ## Returns true when both handles refer to the same variable identity.
   a != nil and b != nil and a.id == b.id
 
@@ -59,7 +59,7 @@ proc `name=`*(variable: Variable, name: string) =
   ## Updates the variable's display name.
   variable.nameValue = name
 
-proc value*(variable: Variable): KiwiScalar =
+proc value*(variable: Variable): KiwiScalar {.inline.} =
   ## Returns the variable's current solved value.
   variable.currentValue
 
