@@ -91,9 +91,10 @@ proc anyPivotableSymbol(row: Row): Symbol =
 
 proc substitute(solver: var Solver, symbol: Symbol, row: Row) =
   for key in solver.sortedRowKeys:
-    solver.rows[key].substitute(symbol, row)
-    if not key.isExternal and solver.rows[key].constant < 0:
-      solver.infeasibleRows.add key
+    solver.rows.withValue(key, current):
+      current[].substitute(symbol, row)
+      if not key.isExternal and current[].constant < 0:
+        solver.infeasibleRows.add key
 
   solver.objective.substitute(symbol, row)
   if solver.hasArtificial:
@@ -105,9 +106,9 @@ proc createRow(solver: var Solver, constraint: Constraint, tag: var Tag): Row =
   for term in constraint.expression:
     if abs(term.coefficient.float64) >= 1.0e-8:
       let symbol = solver.getVarSymbol(term.variable)
-      if solver.rows.hasKey(symbol):
-        result.insert(solver.rows[symbol], term.coefficient)
-      else:
+      solver.rows.withValue(symbol, existing):
+        result.insert(existing[], term.coefficient)
+      do:
         result.insert(symbol, term.coefficient)
 
   case constraint.relation
@@ -176,10 +177,10 @@ proc getDualEnteringSymbol(solver: Solver, row: Row): Symbol =
         ratio = r
         result = symbol
 
-proc getLeavingRow(solver: Solver, entering: Symbol): Symbol =
+proc getLeavingRow(solver: var Solver, entering: Symbol): Symbol =
   var ratio = float64.high.KiwiScalar
   result = initSymbol()
-  for symbol, row in solver.rows:
+  for symbol, row in solver.rows.mpairs:
     if not symbol.isExternal:
       let temp = row.coefficientFor(entering)
       if temp < 0:
@@ -188,14 +189,14 @@ proc getLeavingRow(solver: Solver, entering: Symbol): Symbol =
           ratio = tempRatio
           result = symbol
 
-proc getMarkerLeavingRow(solver: Solver, marker: Symbol): Symbol =
+proc getMarkerLeavingRow(solver: var Solver, marker: Symbol): Symbol =
   var r1 = float64.high.KiwiScalar
   var r2 = float64.high.KiwiScalar
   var first = initSymbol()
   var second = initSymbol()
   var third = initSymbol()
 
-  for symbol, row in solver.rows:
+  for symbol, row in solver.rows.mpairs:
     let c = row.coefficientFor(marker)
     if c != 0:
       if symbol.isExternal:
@@ -262,9 +263,8 @@ proc addWithArtificialVariable(solver: var Solver, row: Row): bool =
   solver.hasArtificial = false
   solver.artificial = initRow()
 
-  if solver.rows.hasKey(art):
-    var row = solver.rows[art]
-    solver.rows.del(art)
+  var row: Row
+  if solver.rows.pop(art, row):
     if row.cells.len == 0:
       return result
 
@@ -277,14 +277,15 @@ proc addWithArtificialVariable(solver: var Solver, row: Row): bool =
     solver.rows[entering] = row
 
   for symbol in solver.sortedRowKeys:
-    solver.rows[symbol].remove(art)
+    solver.rows.withValue(symbol, current):
+      current[].remove(art)
   solver.objective.remove(art)
 
 proc removeMarkerEffects(solver: var Solver, marker: Symbol, strength: Strength) =
   let strengthValue = KiwiScalar(-strength.toKiwiScalar.float64)
-  if solver.rows.hasKey(marker):
-    solver.objective.insert(solver.rows[marker], strengthValue)
-  else:
+  solver.rows.withValue(marker, row):
+    solver.objective.insert(row[], strengthValue)
+  do:
     solver.objective.insert(marker, strengthValue)
 
 proc removeConstraintEffects(solver: var Solver, constraint: Constraint, tag: Tag) =
@@ -349,8 +350,9 @@ proc removeConstraint*(solver: var Solver, constraint: Constraint) =
   solver.constraints.del(storedConstraint)
   solver.removeConstraintEffects(storedConstraint, tag)
 
-  if solver.rows.hasKey(tag.marker):
-    solver.rows.del(tag.marker)
+  var markerRow: Row
+  if solver.rows.pop(tag.marker, markerRow):
+    discard
   else:
     let leaving = solver.getMarkerLeavingRow(tag.marker)
     if leaving.isInvalid:
@@ -412,24 +414,23 @@ proc suggestValue*(solver: var Solver, variable: Variable, value: KiwiScalar) =
   info.constant = checkedValue
   solver.edits[variable.variableId] = info
 
-  if solver.rows.hasKey(info.tag.marker):
-    if solver.rows[info.tag.marker].add(KiwiScalar(-delta.float64)) < 0:
+  solver.rows.withValue(info.tag.marker, row):
+    if row[].add(KiwiScalar(-delta.float64)) < 0:
       solver.infeasibleRows.add info.tag.marker
     solver.dualOptimize()
     return
 
-  if solver.rows.hasKey(info.tag.other):
-    if solver.rows[info.tag.other].add(delta) < 0:
+  solver.rows.withValue(info.tag.other, row):
+    if row[].add(delta) < 0:
       solver.infeasibleRows.add info.tag.other
     solver.dualOptimize()
     return
 
   for symbol in solver.sortedRowKeys:
-    let coeff = solver.rows[symbol].coefficientFor(info.tag.marker)
-    if coeff != 0 and
-        solver.rows[symbol].add(KiwiScalar(delta.float64 * coeff.float64)) < 0 and
-        not symbol.isExternal:
-      solver.infeasibleRows.add symbol
+    solver.rows.withValue(symbol, row):
+      if row[].addProductFor(info.tag.marker, delta) and row[].constant < 0 and
+          not symbol.isExternal:
+        solver.infeasibleRows.add symbol
 
   solver.dualOptimize()
 
@@ -437,9 +438,11 @@ proc updateVariables*(solver: var Solver) =
   ## Writes solved values back into all external variables known to `solver`.
   for id, variable in solver.variables:
     let symbol = solver.vars[id]
-    if solver.rows.hasKey(symbol):
-      variable.value = solver.rows[symbol].constant
-    else:
+    var updated = false
+    solver.rows.withValue(symbol, row):
+      variable.value = row[].constant
+      updated = true
+    if not updated:
       variable.value = 0
 
 proc reset*(solver: var Solver) =
