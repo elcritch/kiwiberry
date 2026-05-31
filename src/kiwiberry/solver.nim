@@ -371,12 +371,13 @@ proc suggestValue*(solver: var Solver, variable: Variable, value: KiwiScalar) =
   ## Suggests a new value for an edit variable and dual-optimizes the solver.
   ##
   ## Raises `UnknownEditVariableError` if `variable` is not editable.
+  let checkedValue = value.requireFinite("suggested value")
   if not solver.edits.hasKey(variable.variableId):
     raiseUnknownEditVariable(variable)
 
   var info = solver.edits[variable.variableId]
-  let delta = value - info.constant
-  info.constant = value
+  let delta = checkedValue - info.constant
+  info.constant = checkedValue
   solver.edits[variable.variableId] = info
 
   if solver.rows.hasKey(info.tag.marker):
@@ -437,9 +438,28 @@ proc `[]=`*(solver: var Solver, variable: Variable, strength: Strength) =
   ## Adds `variable` as an edit variable with `strength`.
   solver.addEditVariable(variable, strength)
 
-proc constraint*(solver: var Solver, constraint: Constraint) =
-  ## Adds `constraint` to `solver`.
+proc constraint*(
+    solver: var Solver, constraint: Constraint
+): Constraint {.discardable.} =
+  ## Adds `constraint` to `solver` and returns it for later removal.
   solver.addConstraint(constraint)
+  constraint
+
+proc remove*(solver: var Solver, constraint: Constraint) =
+  ## Removes `constraint` from `solver`.
+  solver.removeConstraint(constraint)
+
+proc remove*(solver: var Solver, variable: Variable) =
+  ## Removes `variable` as an edit variable.
+  solver.removeEditVariable(variable)
+
+proc has*(solver: Solver, constraint: Constraint): bool =
+  ## Returns true when `constraint` has been added to `solver`.
+  solver.hasConstraint(constraint)
+
+proc has*(solver: Solver, variable: Variable): bool =
+  ## Returns true when `variable` is an edit variable.
+  solver.hasEditVariable(variable)
 
 proc suggest*(solver: var Solver, variable: Variable, value: KiwiScalar) =
   ## Suggests `value` for an edit variable.
@@ -497,9 +517,28 @@ proc `[]=`*(solver: SolverRef, variable: Variable, strength: Strength) =
   ## Adds `variable` as an edit variable on a ref-style solver.
   solver[].addEditVariable(variable, strength)
 
-proc constraint*(solver: SolverRef, constraint: Constraint) =
-  ## Adds `constraint` to a ref-style solver.
+proc constraint*(
+    solver: SolverRef, constraint: Constraint
+): Constraint {.discardable.} =
+  ## Adds `constraint` to a ref-style solver and returns it for later removal.
   solver[].addConstraint(constraint)
+  constraint
+
+proc remove*(solver: SolverRef, constraint: Constraint) =
+  ## Removes `constraint` from a ref-style solver.
+  solver[].removeConstraint(constraint)
+
+proc remove*(solver: SolverRef, variable: Variable) =
+  ## Removes `variable` as an edit variable from a ref-style solver.
+  solver[].removeEditVariable(variable)
+
+proc has*(solver: SolverRef, constraint: Constraint): bool =
+  ## Returns true when `constraint` has been added to a ref-style solver.
+  solver[].hasConstraint(constraint)
+
+proc has*(solver: SolverRef, variable: Variable): bool =
+  ## Returns true when `variable` is editable in a ref-style solver.
+  solver[].hasEditVariable(variable)
 
 proc suggest*(solver: SolverRef, variable: Variable, value: KiwiScalar) =
   ## Suggests `value` for an edit variable on a ref-style solver.

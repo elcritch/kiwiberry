@@ -1,6 +1,8 @@
 ## Exception types raised by solver operations.
 
-import ./[constraints, variables]
+import ./[constraints, validation, variables]
+
+export validation
 
 type
   UnsatisfiableConstraintError* = object of CatchableError

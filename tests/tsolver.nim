@@ -90,22 +90,34 @@ block ergonomicValueSolver:
   let width = vars"width"
 
   solver[width] = Strong
-  solver.constraint(width >= 100)
+  let minWidth = solver.constraint(width >= 100)
+  doAssert solver.has(minWidth)
+  doAssert solver.has(width)
   solver.suggest(width, 240)
   solver.update()
 
   doAssert width.value.closeTo(240)
+  solver.remove(minWidth)
+  solver.remove(width)
+  doAssert not solver.has(minWidth)
+  doAssert not solver.has(width)
 
 block ergonomicRefSolver:
   let solver = newSolver()
   let width = vars"refWidth"
 
   solver[width] = Strong
-  solver.constraint(width >= 100)
+  let minWidth = solver.constraint(width >= 100)
+  doAssert solver.has(minWidth)
+  doAssert solver.has(width)
   solver.suggest(width, 240)
   solver.update()
 
   doAssert width.value.closeTo(240)
+  solver.remove(minWidth)
+  solver.remove(width)
+  doAssert not solver.has(minWidth)
+  doAssert not solver.has(width)
 
 block suggestingValuesAcrossRows:
   var solver = initSolver()

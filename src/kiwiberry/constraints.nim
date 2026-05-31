@@ -1,6 +1,8 @@
 ## Constraint construction and query API.
 
 import std/[hashes, tables]
+when not defined(js):
+  import std/atomics
 
 import ./[expressions, scalars, strengths, variables]
 
@@ -16,7 +18,19 @@ type
     relationValue: Relation
     strengthValue: Strength
 
-var nextConstraintId = 1'u64
+when defined(js):
+  var nextConstraintId = 1'u64
+
+  proc takeConstraintId(): uint64 =
+    result = nextConstraintId
+    inc nextConstraintId
+
+else:
+  var nextConstraintId: Atomic[uint64]
+  nextConstraintId.store(1)
+
+  proc takeConstraintId(): uint64 =
+    nextConstraintId.fetchAdd(1)
 
 proc reduce(expression: Expression): Expression =
   var reduced = initOrderedTable[VariableId, Term]()
@@ -42,8 +56,7 @@ proc newConstraint*(
   ## The expression is reduced by variable identity and the strength is clipped
   ## into Kiwi's supported strength range.
   new(result)
-  result.id = nextConstraintId
-  inc nextConstraintId
+  result.id = takeConstraintId()
   result.expressionValue = reduce(expression)
   result.relationValue = relation
   result.strengthValue = strength.clip

@@ -25,6 +25,20 @@ block basicConstraints:
   doAssert x.value == 7.KiwiScalar
   doAssert y.value == 3.KiwiScalar
 
+block dynamicConstraintRemoval:
+  var solver = initSolver()
+  let width = vars"width"
+  solver[width] = Strong
+
+  let minWidth = solver.constraint(width >= 100)
+
+  doAssert solver.has(minWidth)
+  solver.remove(minWidth)
+  doAssert not solver.has(minWidth)
+
+  solver.remove(width)
+  doAssert not solver.has(width)
+
 block refSolverExample:
   let solver = newSolver()
   let x = vars"x"

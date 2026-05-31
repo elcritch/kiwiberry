@@ -13,13 +13,18 @@ type
 
 proc initTerm*(variable: Variable, coefficient: KiwiScalar = 1): Term =
   ## Creates a term for `coefficient * variable`.
-  Term(variableValue: variable, coefficientValue: coefficient)
+  Term(
+    variableValue: variable,
+    coefficientValue: coefficient.requireFinite("term coefficient"),
+  )
 
 proc initExpression*(
     terms: openArray[Term] = [], constant: KiwiScalar = 0
 ): Expression =
   ## Creates an expression from terms and a constant.
-  Expression(termsValue: @terms, constantValue: constant)
+  Expression(
+    termsValue: @terms, constantValue: constant.requireFinite("expression constant")
+  )
 
 proc toExpression*(variable: Variable): Expression =
   ## Converts a variable to a one-term expression.

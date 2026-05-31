@@ -14,8 +14,9 @@ This plan tracks only the work still worth doing after the initial port.
 - `LICENSE` uses BSD-3-Clause terms based on Kiwi's license.
 - Public API docs are present on exported modules, types, procs, and error
   types.
-- `README.md` covers basic solving, ref solvers, named constraint
-  constructors, strengths, edit variables, variable identity, and DSL caveats.
+- `README.md` covers basic solving, dynamic constraint removal, ref solvers,
+  named constraint constructors, strengths, edit variables, finite numeric
+  inputs, variable identity, and DSL caveats.
 - README examples are mirrored in `tests/treadme.nim`.
 - All upstream Kiwi C++ test files have corresponding Nim coverage:
   `VariableTest`, `TermTest`, `ExpressionTest`, `ConstraintTest`, `StrengthTest`,
@@ -24,9 +25,15 @@ This plan tracks only the work still worth doing after the initial port.
   solvers (`newSolver`), plus named constraint constructors `le`, `ge`, and
   `eq`.
 - Solver helper aliases support `solver[variable] = strength`,
-  `solver.constraint(...)`, `solver.suggest(...)`, and `solver.update()`.
+  `solver.constraint(...)`, `solver.suggest(...)`, `solver.update()`,
+  `solver.remove(...)`, and `solver.has(...)`.
 - The variable literal helper is `vars"x"` and is covered by native and
   JavaScript tests.
+- Invalid numeric inputs raise `InvalidSolverValueError` before entering solver
+  state.
+- Variable and constraint identities use atomic counters on native threaded
+  builds, with a threaded uniqueness test under `--mm:atomicArc`.
+- Default local builds define `useMalloc`.
 - `tests/tsolver.nim` passes in debug, release, and danger modes.
 - `nimble check` passes.
 - `nim test` passes.

@@ -51,6 +51,19 @@ doAssert x.value == 7.KiwiScalar
 doAssert y.value == 3.KiwiScalar
 ```
 
+Keep the returned constraint when a dynamic layout needs to remove it later:
+
+```nim
+let minWidth = solver.constraint(width >= 100)
+
+doAssert solver.has(minWidth)
+solver.remove(minWidth)
+doAssert not solver.has(minWidth)
+
+solver.remove(width)
+doAssert not solver.has(width)
+```
+
 Use `newSolver()` when you want a shared solver handle instead of a value:
 
 ```nim
@@ -111,6 +124,12 @@ solver.constraint((width >= 100).withStrength(Strong))
 
 Required constraints must all be satisfiable. Soft constraints are preferences
 the solver may violate according to their relative strengths.
+
+## Numeric Inputs
+
+Solver scalars must be finite. NaN, infinity, division by zero, invalid
+strength components, invalid variable values, and invalid edit suggestions raise
+`InvalidSolverValueError` before they can enter the tableau.
 
 ## Variables And Identity
 

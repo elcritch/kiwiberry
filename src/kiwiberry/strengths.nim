@@ -15,9 +15,16 @@ func toKiwiScalar*(strength: Strength): KiwiScalar =
 
 func createStrength*(a, b, c: KiwiScalar, weight: KiwiScalar = 1): Strength =
   ## Creates a strength from three weighted priority components.
-  let aa = max(0.KiwiScalar, min(1000.KiwiScalar, a * weight))
-  let bb = max(0.KiwiScalar, min(1000.KiwiScalar, b * weight))
-  let cc = max(0.KiwiScalar, min(1000.KiwiScalar, c * weight))
+  let checkedWeight = weight.requireFinite("strength weight")
+  let aa = max(
+    0.KiwiScalar, min(1000.KiwiScalar, a.requireFinite("strength a") * checkedWeight)
+  )
+  let bb = max(
+    0.KiwiScalar, min(1000.KiwiScalar, b.requireFinite("strength b") * checkedWeight)
+  )
+  let cc = max(
+    0.KiwiScalar, min(1000.KiwiScalar, c.requireFinite("strength c") * checkedWeight)
+  )
   Strength(aa * 1_000_000.KiwiScalar + bb * 1_000.KiwiScalar + cc)
 
 const

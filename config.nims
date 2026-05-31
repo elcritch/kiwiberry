@@ -2,6 +2,7 @@ import std/[os, strutils]
 
 --mm:atomicArc
 --threads:on
+--define:useMalloc
 
 task test, "run unit tests":
   for testFile in listFiles("tests/"):
