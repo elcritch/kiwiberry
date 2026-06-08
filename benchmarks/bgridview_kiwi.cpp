@@ -2,7 +2,7 @@
 //
 // Run with:
 //   c++ -O3 -DNDEBUG -std=c++17 -Ideps/kiwi benchmarks/bgridview_kiwi.cpp -o /tmp/bgridview_kiwi
-//   KIWIBERRY_BENCH_ITERS=1000 /tmp/bgridview_kiwi
+//   KIWIBERRY_BENCH_ITERS=20000 /tmp/bgridview_kiwi
 
 #include <kiwi/kiwi.h>
 
@@ -233,7 +233,7 @@ double finishTiming(
 int main()
 {
 #ifdef NDEBUG
-    const int iterations = benchIterations(1000);
+    const int iterations = benchIterations(20000);
 #else
     const int iterations = benchIterations(50);
 #endif

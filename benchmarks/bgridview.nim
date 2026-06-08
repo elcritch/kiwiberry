@@ -1,7 +1,7 @@
 ## 2x6 UI grid layout benchmark.
 ##
 ## Run with:
-##   KIWIBERRY_BENCH_ITERS=1000 nim c -d:release -r benchmarks/bgridview.nim
+##   KIWIBERRY_BENCH_ITERS=20000 nim c -d:release -r benchmarks/bgridview.nim
 
 import std/[monotimes, os, strformat, strutils, times]
 
@@ -158,7 +158,7 @@ proc finishTiming(
 
 when isMainModule:
   when defined(release):
-    let iterations = benchIterations(1000)
+    let iterations = benchIterations(20_000)
   else:
     let iterations = benchIterations(50)
 

@@ -168,11 +168,11 @@ nim test
 ## Benchmark
 
 ```sh
-KIWIBERRY_BENCH_ITERS=1000 nim c -d:release -r benchmarks/bgridview.nim
+KIWIBERRY_BENCH_ITERS=20000 nim c -d:release -r benchmarks/bgridview.nim
 
 c++ -O3 -DNDEBUG -std=c++17 -Ideps/kiwi \
   benchmarks/bgridview_kiwi.cpp -o /tmp/bgridview_kiwi
-KIWIBERRY_BENCH_ITERS=1000 /tmp/bgridview_kiwi
+KIWIBERRY_BENCH_ITERS=20000 /tmp/bgridview_kiwi
 ```
 
 ## License
