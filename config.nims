@@ -1,8 +1,7 @@
 import std/[os, strutils]
 
---mm:atomicArc
---threads:on
---define:useMalloc
+--mm:arc
+--threads:off
 
 task test, "run unit tests":
   for testFile in listFiles("tests/"):
