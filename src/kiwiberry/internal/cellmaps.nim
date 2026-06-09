@@ -42,7 +42,7 @@ proc len*(map: CellMap): int {.inline.} =
 proc hasKey*(map: CellMap, symbol: Symbol): bool {.inline.} =
   map.findIndex(symbol) >= 0
 
-proc add*(map: var CellMap, symbol: Symbol, coefficient: KiwiScalar) {.inline.} =
+proc add*(map: var CellMap, symbol: Symbol, coefficient: KiwiScalar)  =
   let index = map.lowerIndex(symbol)
   if index < map.entries.len and map.entries[index].symbol == symbol:
     let next = map.entries[index].coefficient + coefficient
