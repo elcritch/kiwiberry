@@ -121,9 +121,9 @@ proc violated*(constraint: Constraint): bool =
   of relEq:
     not constraint.expressionValue.value.nearZero
   of relGe:
-    constraint.expressionValue.value < 0
+    constraint.expressionValue.value < 0'ks
   of relLe:
-    constraint.expressionValue.value > 0
+    constraint.expressionValue.value > 0'ks
 
 proc withStrength*(constraint: Constraint, strength: Strength): Constraint =
   ## Returns a new constraint with the same expression/relation and new strength.

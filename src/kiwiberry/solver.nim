@@ -90,7 +90,7 @@ proc anyPivotableSymbol(row: Row): Symbol =
 proc substitute(solver: var Solver, symbol: Symbol, row: Row) =
   for key, current in solver.rows.mpairs:
     current.substitute(symbol, row)
-    if not key.isExternal and current.constant < 0:
+    if not key.isExternal and current.constant < 0'ks:
       solver.infeasibleRows.add key
 
   solver.objective.substitute(symbol, row)
@@ -114,9 +114,9 @@ proc createRow(solver: var Solver, constraint: Constraint, tag: var Tag): Row =
   of relLe, relGe:
     let coeff =
       if constraint.relation == relLe:
-        1.KiwiScalar
+        1'ks
       else:
-        KiwiScalar(-1.0)
+        -1'ks
     let slack = solver.newSymbol(skSlack)
     tag.marker = slack
     result.insert(slack, coeff)
@@ -124,23 +124,23 @@ proc createRow(solver: var Solver, constraint: Constraint, tag: var Tag): Row =
       let error = solver.newSymbol(skError)
       tag.other = error
       result.insert(error, KiwiScalar(-coeff.float64))
-      solver.objective.insert(error, constraint.strength.toKiwiScalar)
+      solver.objective.insert(error, constraint.strength.KiwiScalar)
   of relEq:
     if constraint.strength < Required:
       let errPlus = solver.newSymbol(skError)
       let errMinus = solver.newSymbol(skError)
       tag.marker = errPlus
       tag.other = errMinus
-      result.insert(errPlus, KiwiScalar(-1.0))
-      result.insert(errMinus, 1.KiwiScalar)
-      solver.objective.insert(errPlus, constraint.strength.toKiwiScalar)
-      solver.objective.insert(errMinus, constraint.strength.toKiwiScalar)
+      result.insert(errPlus, -1'ks)
+      result.insert(errMinus, 1'ks)
+      solver.objective.insert(errPlus, constraint.strength.KiwiScalar)
+      solver.objective.insert(errMinus, constraint.strength.KiwiScalar)
     else:
       let dummy = solver.newSymbol(skDummy)
       tag.marker = dummy
       result.insert(dummy)
 
-  if result.constant < 0:
+  if result.constant < 0'ks:
     result.reverseSign()
 
 proc chooseSubject(row: Row, tag: Tag): Symbol =
@@ -152,23 +152,23 @@ proc chooseSubject(row: Row, tag: Tag): Symbol =
   if not result.isInvalid:
     return result
 
-  if tag.marker.isPivotable and row.coefficientFor(tag.marker) < 0:
+  if tag.marker.isPivotable and row.coefficientFor(tag.marker) < 0'ks:
     return tag.marker
 
-  if tag.other.isPivotable and row.coefficientFor(tag.other) < 0:
+  if tag.other.isPivotable and row.coefficientFor(tag.other) < 0'ks:
     return tag.other
 
 proc getEnteringSymbol(objective: Row): Symbol =
   result = initSymbol()
   for symbol, coefficient in objective.cells:
-    if not symbol.isDummy and coefficient < 0 and symbol.preferSymbol(result):
+    if not symbol.isDummy and coefficient < 0'ks and symbol.preferSymbol(result):
       result = symbol
 
 proc getDualEnteringSymbol(solver: Solver, row: Row): Symbol =
   var ratio = float64.high.KiwiScalar
   result = initSymbol()
   for symbol, coefficient in row.cells:
-    if coefficient > 0 and not symbol.isDummy:
+    if coefficient > 0'ks and not symbol.isDummy:
       let r = KiwiScalar(
         solver.objective.coefficientFor(symbol).float64 / coefficient.float64
       )
@@ -182,7 +182,7 @@ proc getLeavingRow(solver: var Solver, entering: Symbol): Symbol =
   for symbol, row in solver.rows.mpairs:
     if not symbol.isExternal:
       let temp = row.coefficientFor(entering)
-      if temp < 0:
+      if temp < 0'ks:
         let tempRatio = KiwiScalar(-row.constant.float64 / temp.float64)
         if symbol.preferRatio(tempRatio, result, ratio):
           ratio = tempRatio
@@ -197,11 +197,11 @@ proc getMarkerLeavingRow(solver: var Solver, marker: Symbol): Symbol =
 
   for symbol, row in solver.rows.mpairs:
     let c = row.coefficientFor(marker)
-    if c != 0:
+    if c != 0'ks:
       if symbol.isExternal:
         if third.isInvalid or third < symbol:
           third = symbol
-      elif c < 0:
+      elif c < 0'ks:
         let r = KiwiScalar(-row.constant.float64 / c.float64)
         if symbol.preferRatio(r, first, r1):
           r1 = r
@@ -240,7 +240,7 @@ proc dualOptimize(solver: var Solver) =
     let leaving = solver.infeasibleRows.pop()
     if solver.rows.hasKey(leaving) and
         abs(solver.rows[leaving].constant.float64) >= 1.0e-8 and
-        solver.rows[leaving].constant < 0:
+        solver.rows[leaving].constant < 0'ks:
       let entering = solver.getDualEnteringSymbol(solver.rows[leaving])
       if entering.isInvalid:
         raiseInternalSolverError("Dual optimize failed.")
@@ -280,7 +280,7 @@ proc addWithArtificialVariable(solver: var Solver, row: Row): bool =
   solver.objective.remove(art)
 
 proc removeMarkerEffects(solver: var Solver, marker: Symbol, strength: Strength) =
-  let strengthValue = KiwiScalar(-strength.toKiwiScalar.float64)
+  let strengthValue = KiwiScalar(-strength.float64)
   solver.rows.withValue(marker, row):
     solver.objective.insert(row[], strengthValue)
   do:
@@ -382,7 +382,7 @@ proc addEditVariable*(solver: var Solver, variable: Variable, strength: Strength
   let constraint = newConstraint(toExpression(variable), relEq, clipped)
   solver.addConstraint(constraint)
   solver.edits[variable.variableId] = EditInfo(
-    tag: solver.constraints[constraint], constraint: constraint, constant: 0.KiwiScalar
+    tag: solver.constraints[constraint], constraint: constraint, constant: 0'ks
   )
 
 proc removeEditVariable*(solver: var Solver, variable: Variable) =
@@ -418,19 +418,19 @@ proc suggestValue*(solver: var Solver, variable: Variable, value: KiwiScalar) =
     raiseUnknownEditVariable(variable)
 
   solver.rows.withValue(marker, row):
-    if row[].add(-delta) < 0:
+    if row[].add(-delta) < 0'ks:
       solver.infeasibleRows.add marker
     solver.dualOptimize()
     return
 
   solver.rows.withValue(other, row):
-    if row[].add(delta) < 0:
+    if row[].add(delta) < 0'ks:
       solver.infeasibleRows.add other
     solver.dualOptimize()
     return
 
   for symbol, row in solver.rows.mpairs:
-    if row.addProductFor(marker, delta) and row.constant < 0 and not symbol.isExternal:
+    if row.addProductFor(marker, delta) and row.constant < 0'ks and not symbol.isExternal:
       solver.infeasibleRows.add symbol
 
   solver.dualOptimize()
@@ -441,7 +441,7 @@ proc updateVariables*(solver: var Solver) =
     solver.rows.withValue(info.symbol, row):
       info.variable.setSolverValue(row[].constant)
     do:
-      info.variable.setSolverValue(0)
+      info.variable.setSolverValue(0'ks)
 
 proc reset*(solver: var Solver) =
   ## Resets the solver to the empty starting state.

@@ -1,6 +1,6 @@
 ## Numeric scalar type used by the solver.
 
-import std/hashes
+import std/[hashes, strutils]
 
 import ./validation
 
@@ -32,14 +32,19 @@ converter toKiwiScalar*(value: SomeFloat): KiwiScalar =
   ## Converts a floating-point literal/value to `KiwiScalar`.
   KiwiScalar(requireFiniteNumber(value.float64, "floating-point scalar"))
 
+template `'ks`*(value: static string): KiwiScalar =
+  ## Converts a numeric string literal to `KiwiScalar`.
+  const x = KiwiScalar(parseFloat(value))
+  x
+
 func requireFinite*(value: KiwiScalar, name: string): KiwiScalar =
   ## Returns `value` or raises when it is NaN or infinity.
   KiwiScalar(requireFiniteNumber(value.float64, name))
 
-func isFinite*(value: KiwiScalar): bool =
+func isFinite*(value: KiwiScalar): bool {.inline.} =
   ## Returns true when `value` is neither NaN nor infinity.
   value.float64.isFiniteNumber
 
-func nearZero*(value: KiwiScalar): bool =
+func nearZero*(value: KiwiScalar): bool {.inline.} =
   ## Returns true when `value` is within Kiwi's zero tolerance.
   abs(value).float64 < 1.0e-8

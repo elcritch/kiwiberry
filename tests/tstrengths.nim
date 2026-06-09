@@ -14,4 +14,4 @@ block createStrengthOrder:
 
 block clipStrength:
   doAssert clip(createStrength(2000, 2000, 2000)) == Required
-  doAssert clip(Strength(-1.KiwiScalar)).toKiwiScalar == 0.KiwiScalar
+  doAssert clip(Strength(-1.KiwiScalar)).KiwiScalar == 0.KiwiScalar

@@ -57,23 +57,25 @@ proc cellIndex(row, col: int): int =
   row * ColCount + col
 
 proc addGridConstraints(bench: var GridBench) =
-  let gutter = 8.KiwiScalar
-  let padding = 12.KiwiScalar
-  let cellInset = 4.KiwiScalar
-  let minColWidth = 64.KiwiScalar
-  let minRowHeight = 44.KiwiScalar
+  let gutter = 8'ks
+  let padding = 12'ks
+  let cellInset = 4'ks
+  let minColWidth = 64'ks
+  let minRowHeight = 44'ks
 
   bench.solver[bench.vars.containerWidth] = Strong
   bench.solver[bench.vars.containerHeight] = Strong
-  bench.solver.constraint(bench.vars.containerLeft == 0)
-  bench.solver.constraint(bench.vars.containerTop == 0)
+  bench.solver.constraint(bench.vars.containerLeft == 0'ks)
+  bench.solver.constraint(bench.vars.containerTop == 0'ks)
 
   for col in 0 ..< ColCount:
     bench.solver.constraint(
       bench.vars.colRight[col] == bench.vars.colLeft[col] + bench.vars.colWidth[col]
     )
     bench.solver.constraint(bench.vars.colWidth[col] >= minColWidth)
-    bench.solver.constraint((bench.vars.colWidth[col] == 110 + col * 3) | Weak)
+    bench.solver.constraint(
+      (bench.vars.colWidth[col] == toKiwiScalar(110 + col * 3)) | Weak
+    )
     if col == 0:
       bench.solver.constraint(
         bench.vars.colLeft[col] == bench.vars.containerLeft + padding
@@ -96,7 +98,9 @@ proc addGridConstraints(bench: var GridBench) =
       bench.vars.rowBottom[row] == bench.vars.rowTop[row] + bench.vars.rowHeight[row]
     )
     bench.solver.constraint(bench.vars.rowHeight[row] >= minRowHeight)
-    bench.solver.constraint((bench.vars.rowHeight[row] == 96 + row * 12) | Weak)
+    bench.solver.constraint(
+      (bench.vars.rowHeight[row] == toKiwiScalar(96 + row * 12)) | Weak
+    )
     if row == 0:
       bench.solver.constraint(
         bench.vars.rowTop[row] == bench.vars.containerTop + padding
@@ -124,13 +128,13 @@ proc addGridConstraints(bench: var GridBench) =
         bench.vars.cellTop[index] == bench.vars.rowTop[row] + cellInset
       )
       bench.solver.constraint(
-        bench.vars.cellWidth[index] == bench.vars.colWidth[col] - 2 * cellInset
+        bench.vars.cellWidth[index] == bench.vars.colWidth[col] - 2'ks * cellInset
       )
       bench.solver.constraint(
-        bench.vars.cellHeight[index] == bench.vars.rowHeight[row] - 2 * cellInset
+        bench.vars.cellHeight[index] == bench.vars.rowHeight[row] - 2'ks * cellInset
       )
-      bench.solver.constraint(bench.vars.cellWidth[index] >= 24)
-      bench.solver.constraint(bench.vars.cellHeight[index] >= 20)
+      bench.solver.constraint(bench.vars.cellWidth[index] >= 24'ks)
+      bench.solver.constraint(bench.vars.cellHeight[index] >= 20'ks)
 
 proc initGridBench(): GridBench =
   result.solver = initSolver()
@@ -138,8 +142,8 @@ proc initGridBench(): GridBench =
   result.addGridConstraints()
 
 proc updateLayout(bench: var GridBench, iteration: int) =
-  bench.solver.suggest(bench.vars.containerWidth, 760 + (iteration mod 37))
-  bench.solver.suggest(bench.vars.containerHeight, 260 + (iteration mod 23))
+  bench.solver.suggest(bench.vars.containerWidth, toKiwiScalar(760 + (iteration mod 37)))
+  bench.solver.suggest(bench.vars.containerHeight, toKiwiScalar(260 + (iteration mod 23)))
   bench.solver.update()
 
 proc checksum(bench: GridBench): float64 =

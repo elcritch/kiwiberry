@@ -11,7 +11,7 @@ type
     termsValue: seq[Term]
     constantValue: KiwiScalar
 
-proc initTerm*(variable: Variable, coefficient: KiwiScalar = 1): Term =
+proc initTerm*(variable: Variable, coefficient: KiwiScalar = 1'ks): Term =
   ## Creates a term for `coefficient * variable`.
   Term(
     variableValue: variable,
@@ -19,7 +19,7 @@ proc initTerm*(variable: Variable, coefficient: KiwiScalar = 1): Term =
   )
 
 proc initExpression*(
-    terms: openArray[Term] = [], constant: KiwiScalar = 0
+    terms: openArray[Term] = [], constant: KiwiScalar = 0'ks
 ): Expression =
   ## Creates an expression from terms and a constant.
   Expression(
@@ -73,7 +73,7 @@ proc value*(expression: Expression): KiwiScalar =
     result += term.value
 
 proc `-`*(variable: Variable): Term =
-  initTerm(variable, -1)
+  initTerm(variable, -1'ks)
 
 proc `*`*(variable: Variable, coefficient: KiwiScalar): Term =
   initTerm(variable, coefficient)
@@ -82,7 +82,7 @@ proc `*`*(coefficient: KiwiScalar, variable: Variable): Term =
   variable * coefficient
 
 proc `/`*(variable: Variable, denominator: KiwiScalar): Term =
-  variable * (1 / denominator)
+  variable * (1'ks / denominator)
 
 proc `-`*(term: Term): Term =
   initTerm(term.variableValue, -term.coefficientValue)
@@ -94,7 +94,7 @@ proc `*`*(coefficient: KiwiScalar, term: Term): Term =
   term * coefficient
 
 proc `/`*(term: Term, denominator: KiwiScalar): Term =
-  term * (1 / denominator)
+  term * (1'ks / denominator)
 
 proc `-`*(expression: Expression): Expression =
   result = initExpression(constant = -expression.constantValue)
@@ -110,7 +110,7 @@ proc `*`*(coefficient: KiwiScalar, expression: Expression): Expression =
   expression * coefficient
 
 proc `/`*(expression: Expression, denominator: KiwiScalar): Expression =
-  expression * (1 / denominator)
+  expression * (1'ks / denominator)
 
 proc `+`*(left, right: Expression): Expression =
   result = initExpression(constant = left.constantValue + right.constantValue)

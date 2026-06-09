@@ -23,7 +23,7 @@ solver.constraint(width >= 100)
 solver.suggest(width, 240)
 solver.update()
 
-doAssert width.value == 240.KiwiScalar
+doAssert width.value == 240'ks
 ```
 
 The short form is the preferred API:
@@ -47,8 +47,8 @@ solver.constraint(x + y == 10)
 solver.constraint(x - y == 4)
 solver.update()
 
-doAssert x.value == 7.KiwiScalar
-doAssert y.value == 3.KiwiScalar
+doAssert x.value == 7'ks
+doAssert y.value == 3'ks
 ```
 
 Keep the returned constraint when a dynamic layout needs to remove it later:
@@ -76,7 +76,7 @@ let x = vars"x"
 solver.constraint(x >= 10)
 solver.update()
 
-doAssert x.value == 10.KiwiScalar
+doAssert x.value == 10'ks
 ```
 
 The longer Kiwi-style names remain available when you want the explicit mapping:
