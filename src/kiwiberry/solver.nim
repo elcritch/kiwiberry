@@ -219,7 +219,7 @@ proc getMarkerLeavingRow(solver: var Solver, marker: Symbol): Symbol =
   else:
     third
 
-proc optimize(solver: var Solver, objective: Row) =
+proc optimize(solver: var Solver, objective: var Row) =
   while true:
     let entering = getEnteringSymbol(objective)
     if entering.isInvalid:
