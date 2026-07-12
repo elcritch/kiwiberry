@@ -231,3 +231,27 @@ block constraintViolatedAfterSolve:
   doAssert variable.value >= 10.KiwiScalar
   doAssert not requiredConstraint.violated
   doAssert weakConstraint.violated
+
+block artificialObjectiveTracksPivots:
+  var solver = initSolver()
+  let variables = [
+    newVariable("v0"), newVariable("v1"), newVariable("v2"),
+    newVariable("v3"), newVariable("v4"), newVariable("v5"),
+    newVariable("v6"), newVariable("v7"), newVariable("v8"),
+    newVariable("v9"),
+  ]
+  let editStrengths = [Medium, Medium, Strong, Weak, Weak, Strong, Medium,
+    Strong, Medium, Medium]
+
+  for index, variable in variables:
+    solver.addEditVariable(variable, editStrengths[index])
+
+  solver.addConstraint((variables[3] == variables[8] - 89) | Strong)
+  solver.addConstraint((variables[4] == variables[8] - 4) | Weak)
+  solver.addConstraint((variables[1] == variables[2] + 61) | Weak)
+  solver.addConstraint((variables[3] == variables[3] + 14) | Strong)
+  solver.addConstraint((variables[0] == variables[5] + 72) | Weak)
+  solver.addConstraint(variables[3] == 270)
+  solver.updateVariables()
+
+  doAssert variables[3].value.closeTo(270)
