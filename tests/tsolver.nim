@@ -1,5 +1,6 @@
 import std/assertions
 import std/strutils
+import std/unittest
 
 import kiwiberry
 
@@ -231,3 +232,31 @@ block constraintViolatedAfterSolve:
   doAssert variable.value >= 10.KiwiScalar
   doAssert not requiredConstraint.violated
   doAssert weakConstraint.violated
+
+suite "live solver objective":
+  test "shared required dimensions remain feasible when bounds trigger artificial pivots":
+    var solver = initSolver()
+    let parent = newVariable("parent")
+    let native = newVariable("native")
+    let styled = newVariable("styled")
+    let constraints =
+      @[
+        eq(native + parent, 24),
+        eq(parent, 120) | Weak,
+        eq(native, 96) | Weak,
+        eq(styled, 96) | Weak,
+        ge(parent, 0),
+        ge(native, 0),
+        ge(styled, 0),
+        eq(styled + parent, 24),
+      ]
+    # Register the bounds after their related equalities and preferences.
+    for index in [0, 1, 2, 3, 6, 7, 4, 5]:
+      solver.addConstraint(constraints[index])
+    solver.updateVariables()
+
+    check parent.value.closeTo(0)
+    check native.value.closeTo(24)
+    check styled.value.closeTo(24)
+    for index in [0, 4, 5, 6, 7]:
+      check not constraints[index].violated
