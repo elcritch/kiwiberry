@@ -233,23 +233,46 @@ block constraintViolatedAfterSolve:
   doAssert not requiredConstraint.violated
   doAssert weakConstraint.violated
 
+block artificialObjectiveTracksPivots:
+  var solver = initSolver()
+  let variables = [
+    newVariable("v0"), newVariable("v1"), newVariable("v2"),
+    newVariable("v3"), newVariable("v4"), newVariable("v5"),
+    newVariable("v6"), newVariable("v7"), newVariable("v8"),
+    newVariable("v9"),
+  ]
+  let editStrengths = [Medium, Medium, Strong, Weak, Weak, Strong, Medium,
+    Strong, Medium, Medium]
+
+  for index, variable in variables:
+    solver.addEditVariable(variable, editStrengths[index])
+
+  solver.addConstraint((variables[3] == variables[8] - 89) | Strong)
+  solver.addConstraint((variables[4] == variables[8] - 4) | Weak)
+  solver.addConstraint((variables[1] == variables[2] + 61) | Weak)
+  solver.addConstraint((variables[3] == variables[3] + 14) | Strong)
+  solver.addConstraint((variables[0] == variables[5] + 72) | Weak)
+  solver.addConstraint(variables[3] == 270)
+  solver.updateVariables()
+
+  doAssert variables[3].value.closeTo(270)
+
 suite "live solver objective":
   test "shared required dimensions remain feasible when bounds trigger artificial pivots":
     var solver = initSolver()
     let parent = newVariable("parent")
     let native = newVariable("native")
     let styled = newVariable("styled")
-    let constraints =
-      @[
-        eq(native + parent, 24),
-        eq(parent, 120) | Weak,
-        eq(native, 96) | Weak,
-        eq(styled, 96) | Weak,
-        ge(parent, 0),
-        ge(native, 0),
-        ge(styled, 0),
-        eq(styled + parent, 24),
-      ]
+    let constraints = @[
+      eq(native + parent, 24),
+      eq(parent, 120) | Weak,
+      eq(native, 96) | Weak,
+      eq(styled, 96) | Weak,
+      ge(parent, 0),
+      ge(native, 0),
+      ge(styled, 0),
+      eq(styled + parent, 24),
+    ]
     # Register the bounds after their related equalities and preferences.
     for index in [0, 1, 2, 3, 6, 7, 4, 5]:
       solver.addConstraint(constraints[index])

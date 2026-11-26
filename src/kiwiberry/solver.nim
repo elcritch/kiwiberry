@@ -112,7 +112,11 @@ proc createRow(solver: var Solver, constraint: Constraint, tag: var Tag): Row =
 
   case constraint.relation
   of relLe, relGe:
-    let coeff = if constraint.relation == relLe: 1'ks else: -1'ks
+    let coeff =
+      if constraint.relation == relLe:
+        1'ks
+      else:
+        -1'ks
     let slack = solver.newSymbol(skSlack)
     tag.marker = slack
     result.insert(slack, coeff)
@@ -215,15 +219,9 @@ proc getMarkerLeavingRow(solver: var Solver, marker: Symbol): Symbol =
   else:
     third
 
-proc optimize(solver: var Solver, useArtificialObjective = false) =
+proc optimize(solver: var Solver, objective: var Row) =
   while true:
-    # Substitution can replace the objective's cells and change their count.
-    # Read the live row after every pivot instead of retaining a value snapshot.
-    let entering =
-      if useArtificialObjective:
-        getEnteringSymbol(solver.artificial)
-      else:
-        getEnteringSymbol(solver.objective)
+    let entering = getEnteringSymbol(objective)
     if entering.isInvalid:
       return
 
@@ -259,7 +257,7 @@ proc addWithArtificialVariable(solver: var Solver, row: Row): bool =
   solver.artificial = row
   solver.hasArtificial = true
 
-  solver.optimize(useArtificialObjective = true)
+  solver.optimize(solver.artificial)
   result = abs(solver.artificial.constant.float64) < 1.0e-8
   solver.hasArtificial = false
   solver.artificial = initRow()
@@ -334,7 +332,7 @@ proc addConstraint*(solver: var Solver, constraint: Constraint) =
     solver.rows[subject] = row
 
   solver.constraints[constraint] = tag
-  solver.optimize()
+  solver.optimize(solver.objective)
 
 proc removeConstraint*(solver: var Solver, constraint: Constraint) =
   ## Removes `constraint` from `solver`.
@@ -363,7 +361,7 @@ proc removeConstraint*(solver: var Solver, constraint: Constraint) =
     row.solveFor(leaving, tag.marker)
     solver.substitute(tag.marker, row)
 
-  solver.optimize()
+  solver.optimize(solver.objective)
 
 proc hasConstraint*(solver: Solver, constraint: Constraint): bool =
   ## Returns true when `constraint` or a structurally equivalent constraint has been added.
