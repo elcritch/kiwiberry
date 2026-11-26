@@ -175,6 +175,13 @@ c++ -O3 -DNDEBUG -std=c++17 -Ideps/kiwi \
 KIWIBERRY_BENCH_ITERS=20000 /tmp/bgridview_kiwi
 ```
 
+`benchmarks/bscaling.nim` times one connected tableau of 100 to 1,000 views,
+each with weak stays on its geometry:
+
+```sh
+nim c -d:release -r benchmarks/bscaling.nim
+```
+
 ## License
 
 Kiwiberry uses BSD-3-Clause terms based on Kiwi's license. See `LICENSE`.
