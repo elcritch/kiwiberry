@@ -100,9 +100,7 @@ proc substitute(solver: var Solver, symbol: Symbol, row: Row) =
 proc createRow(solver: var Solver, constraint: Constraint, tag: var Tag): Row =
   result = initRow(constraint.expression.constant)
 
-  let terms = constraint.expression.terms
-  for index in 0 ..< terms.len:
-    let term {.cursor.} = terms[index]
+  for term in constraint.expression:
     if abs(term.coefficient.float64) >= 1.0e-8:
       let symbol = solver.getVarSymbol(term.variable)
       solver.rows.withValue(symbol, existing):

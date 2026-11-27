@@ -2,13 +2,21 @@
 
 import ./[scalars, variables]
 
+const InlineTermCount = 4
+
 type
   Term* = object ## Variable/coefficient pair.
     variableValue: Variable
     coefficientValue: KiwiScalar
 
-  Expression* = object ## Linear expression plus constant.
-    termsValue: seq[Term]
+  Expression* = object
+    ## Linear expression plus constant.
+    # Small expressions keep their terms in place, so building and combining
+    # them allocates nothing. Past `InlineTermCount` terms, every term moves
+    # to `spilledTerms`.
+    inlineTerms: array[InlineTermCount, Term]
+    spilledTerms: seq[Term]
+    termCount: int
     constantValue: KiwiScalar
 
 proc initTerm*(variable: Variable, coefficient: KiwiScalar = 1'ks): Term =
@@ -18,13 +26,29 @@ proc initTerm*(variable: Variable, coefficient: KiwiScalar = 1'ks): Term =
     coefficientValue: coefficient.requireFinite("term coefficient"),
   )
 
+proc add*(expression: var Expression, term: sink Term) =
+  ## Appends `term` without combining it with existing terms.
+  if expression.termCount < InlineTermCount:
+    expression.inlineTerms[expression.termCount] = term
+  else:
+    if expression.termCount == InlineTermCount:
+      expression.spilledTerms = newSeqOfCap[Term](InlineTermCount * 2)
+      for index in 0 ..< InlineTermCount:
+        expression.spilledTerms.add move(expression.inlineTerms[index])
+    expression.spilledTerms.add term
+  inc expression.termCount
+
+proc add*(expression: var Expression, constant: KiwiScalar) =
+  ## Adds `constant` to the expression constant.
+  expression.constantValue += constant
+
 proc initExpression*(
     terms: openArray[Term] = [], constant: KiwiScalar = 0'ks
 ): Expression =
   ## Creates an expression from terms and a constant.
-  Expression(
-    termsValue: @terms, constantValue: constant.requireFinite("expression constant")
-  )
+  result.constantValue = constant.requireFinite("expression constant")
+  for term in terms:
+    result.add term
 
 proc toExpression*(variable: Variable): Expression =
   ## Converts a variable to a one-term expression.
@@ -50,26 +74,38 @@ proc value*(term: Term): KiwiScalar =
   ## Evaluates the term using the variable's current value.
   term.coefficientValue * term.variableValue.value
 
-proc terms*(expression: Expression): lent seq[Term] =
-  ## Returns the expression terms.
-  expression.termsValue
-
 proc constant*(expression: Expression): KiwiScalar =
   ## Returns the expression constant.
   expression.constantValue
 
 proc len*(expression: Expression): int =
   ## Returns the number of terms in the expression.
-  expression.termsValue.len
+  expression.termCount
+
+proc `[]`*(expression: Expression, index: int): lent Term =
+  ## Returns the term at `index`.
+  if index < 0 or index >= expression.termCount:
+    raise newException(IndexDefect, "expression term index out of bounds")
+  # Return the stored location itself; an `if` expression may yield a copy.
+  if expression.termCount <= InlineTermCount:
+    return expression.inlineTerms[index]
+  return expression.spilledTerms[index]
 
 iterator items*(expression: Expression): lent Term =
-  for index in 0 ..< expression.termsValue.len:
-    yield expression.termsValue[index]
+  for index in 0 ..< expression.termCount:
+    yield expression[index]
+
+proc terms*(expression: Expression): seq[Term] =
+  ## Returns a copy of the expression terms. Use `items`, `[]` and `len` to
+  ## read them without allocating.
+  result = newSeqOfCap[Term](expression.termCount)
+  for term in expression:
+    result.add term
 
 proc value*(expression: Expression): KiwiScalar =
   ## Evaluates the expression using current variable values.
   result = expression.constantValue
-  for term in expression.termsValue:
+  for term in expression:
     result += term.value
 
 proc `-`*(variable: Variable): Term =
@@ -98,13 +134,13 @@ proc `/`*(term: Term, denominator: KiwiScalar): Term =
 
 proc `-`*(expression: Expression): Expression =
   result = initExpression(constant = -expression.constantValue)
-  for term in expression.termsValue:
-    result.termsValue.add -term
+  for term in expression:
+    result.add -term
 
 proc `*`*(expression: Expression, coefficient: KiwiScalar): Expression =
   result = initExpression(constant = expression.constantValue * coefficient)
-  for term in expression.termsValue:
-    result.termsValue.add term * coefficient
+  for term in expression:
+    result.add term * coefficient
 
 proc `*`*(coefficient: KiwiScalar, expression: Expression): Expression =
   expression * coefficient
@@ -113,14 +149,15 @@ proc `/`*(expression: Expression, denominator: KiwiScalar): Expression =
   expression * (1'ks / denominator)
 
 proc `+`*(left, right: Expression): Expression =
-  result = initExpression(constant = left.constantValue + right.constantValue)
-  result.termsValue = newSeqOfCap[Term](left.termsValue.len + right.termsValue.len)
-  result.termsValue.add left.termsValue
-  result.termsValue.add right.termsValue
+  result = left
+  result.constantValue =
+    (left.constantValue + right.constantValue).requireFinite("expression constant")
+  for term in right:
+    result.add term
 
 proc `+`*(expression: Expression, term: Term): Expression =
   result = expression
-  result.termsValue.add term
+  result.add term
 
 proc `+`*(term: Term, expression: Expression): Expression =
   expression + term

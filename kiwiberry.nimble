@@ -1,4 +1,4 @@
-version       = "0.6.0"
+version       = "0.6.1"
 author        = "Kiwiberry contributors"
 description   = "A pure Nim Cassowary constraint solver based on Kiwi."
 license       = "BSD-3-Clause"

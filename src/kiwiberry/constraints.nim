@@ -32,29 +32,48 @@ else:
   proc takeConstraintId(): uint64 =
     nextConstraintId.fetchAdd(1)
 
-proc reduce(expression: Expression): Expression =
-  let expressionTerms = expression.terms
-  var terms = newSeqOfCap[Term](expressionTerms.len)
-
-  for index in 0 ..< expressionTerms.len:
-    let term {.cursor.} = expressionTerms[index]
-    let id = term.variable.variableId
-    var found = false
-    for existingIndex in 0 ..< terms.len:
-      if terms[existingIndex].variable.variableId == id:
-        let variable = terms[existingIndex].variable
-        let coefficient = terms[existingIndex].coefficient + term.coefficient
-        terms[existingIndex] = initTerm(variable, coefficient)
-        found = true
+proc reduceTerms(terms: openArray[Term], constant: KiwiScalar): Expression =
+  ## Combines terms with the same variable, at its first position and summing
+  ## coefficients in order, then drops terms that cancel.
+  result = initExpression(constant = constant)
+  for index in 0 ..< terms.len:
+    let id = terms[index].variable.variableId
+    var seen = false
+    for earlier in 0 ..< index:
+      if terms[earlier].variable.variableId == id:
+        seen = true
         break
-    if not found:
-      terms.add term
+    if seen:
+      continue
+    var coefficient = terms[index].coefficient
+    var repeated = false
+    for later in index + 1 ..< terms.len:
+      if terms[later].variable.variableId == id:
+        coefficient = coefficient + terms[later].coefficient
+        repeated = true
+    if not coefficient.nearZero:
+      if repeated:
+        result.add initTerm(terms[index].variable, coefficient)
+      else:
+        result.add terms[index]
 
-  var compactTerms = newSeqOfCap[Term](terms.len)
-  for term in terms:
-    if not term.coefficient.nearZero:
-      compactTerms.add term
-  initExpression(compactTerms, expression.constant)
+proc reduce(expression: Expression): Expression =
+  var terms: array[8, Term]
+  if expression.len <= terms.len:
+    for index in 0 ..< expression.len:
+      terms[index] = expression[index]
+    reduceTerms(terms.toOpenArray(0, expression.len - 1), expression.constant)
+  else:
+    reduceTerms(expression.terms, expression.constant)
+
+proc initConstraint(
+    expression: sink Expression, relation: Relation, strength: Strength
+): Constraint =
+  new(result)
+  result.id = takeConstraintId()
+  result.expressionValue = expression
+  result.relationValue = relation
+  result.strengthValue = strength.clip
 
 proc newConstraint*(
     expression: Expression, relation: Relation, strength: Strength = Required
@@ -63,11 +82,21 @@ proc newConstraint*(
   ##
   ## The expression is reduced by variable identity and the strength is clipped
   ## into Kiwi's supported strength range.
-  new(result)
-  result.id = takeConstraintId()
-  result.expressionValue = reduce(expression)
-  result.relationValue = relation
-  result.strengthValue = strength.clip
+  initConstraint(reduce(expression), relation, strength)
+
+proc newConstraint*(
+    terms: openArray[Term],
+    constant: KiwiScalar,
+    relation: Relation,
+    strength: Strength = Required,
+): Constraint =
+  ## Creates the constraint `terms + constant <relation> 0` directly, without
+  ## building intermediate expressions. Terms are reduced as for an expression.
+  initConstraint(
+    reduceTerms(terms, constant.requireFinite("expression constant")),
+    relation,
+    strength,
+  )
 
 proc expression*(constraint: Constraint): lent Expression =
   ## Returns the reduced expression stored by `constraint`.
@@ -127,7 +156,8 @@ proc violated*(constraint: Constraint): bool =
 
 proc withStrength*(constraint: Constraint, strength: Strength): Constraint =
   ## Returns a new constraint with the same expression/relation and new strength.
-  newConstraint(constraint.expressionValue, constraint.relationValue, strength)
+  # The stored expression is already reduced.
+  initConstraint(constraint.expressionValue, constraint.relationValue, strength)
 
 proc `|`*(constraint: Constraint, strength: Strength): Constraint =
   ## Convenience syntax for `withStrength`.

@@ -112,3 +112,47 @@ block constraintViolated:
 
   doAssert not required.violated
   doAssert weak.violated
+
+block reductionAcrossInlineTerms:
+  let a = newVariable("a")
+  let b = newVariable("b")
+  let c = newVariable("c")
+  let d = newVariable("d")
+  let e = newVariable("e")
+  # Duplicates on both sides of the inline boundary keep their first position,
+  # and terms that cancel are dropped.
+  let constraint = newConstraint(a + b * 2 + c + d + e + a * 3 - b * 2 + 7, relEq)
+  doAssert constraint.expression.constant == 7'ks
+  doAssert constraint.expression.len == 4
+  doAssert constraint.expression[0].variable.sameVariable(a)
+  doAssert constraint.expression[0].coefficient == 4'ks
+  doAssert constraint.expression[1].variable.sameVariable(c)
+  doAssert constraint.expression[3].variable.sameVariable(e)
+
+block directConstraintConstruction:
+  let x = newVariable("x")
+  let y = newVariable("y")
+  let direct =
+    newConstraint([initTerm(x, 2), initTerm(y, -1), initTerm(x, 1)], -10, relGe, Strong)
+  let operators = (x * 2 - y + x - 10 >= 0'ks) | Strong
+  doAssert direct.sameShape(operators)
+  doAssert direct.expression.len == 2
+  doAssert direct.expression[0].coefficient == 3'ks
+  doAssert direct.strength == Strong
+
+  var solver = initSolver()
+  solver.addConstraint(direct)
+  doAssert solver.hasConstraint(operators)
+  doAssertRaises(ValueError):
+    discard newConstraint([initTerm(x)], KiwiScalar(Inf), relEq)
+
+block withStrengthKeepsTheReducedExpression:
+  let x = newVariable("x")
+  let required = x + x + 4 == 0'ks
+  let weak = required.withStrength(Weak)
+  doAssert weak.strength == Weak
+  doAssert weak.relation == relEq
+  doAssert not weak.sameConstraint(required)
+  doAssert weak.expression.len == 1
+  doAssert weak.expression[0].coefficient == 2'ks
+  doAssert weak.expression.constant == 4'ks
