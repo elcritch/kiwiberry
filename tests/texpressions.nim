@@ -167,3 +167,41 @@ block expressionComparisonCreatesConstraints:
   let ge = expression >= other
   doAssert ge.relation == relGe
   doAssert ge.strength == Required
+
+block expressionsGrowPastInlineTerms:
+  var variables: seq[Variable]
+  for index in 0 ..< 7:
+    variables.add newVariable("v" & $index)
+
+  var expression = initExpression(constant = 1)
+  for index in 0 ..< variables.len:
+    expression.add initTerm(variables[index], KiwiScalar(index + 1))
+    doAssert expression.len == index + 1
+    for earlier in 0 .. index:
+      doAssert expression[earlier].variable.sameVariable(variables[earlier])
+      doAssert expression[earlier].coefficient == KiwiScalar(earlier + 1)
+  expression.add 2'ks
+  doAssert expression.constant == 3'ks
+
+  var seen = 0
+  for term in expression:
+    doAssert term.variable.sameVariable(variables[seen])
+    inc seen
+  doAssert seen == variables.len
+  doAssert expression.terms.len == variables.len
+
+  let small =
+    initExpression([initTerm(variables[0]), initTerm(variables[1], 2)], constant = 4)
+  let combined = small + expression - small
+  doAssert combined.len == 2 + variables.len + 2
+  doAssert combined.constant == 3'ks
+  doAssert combined[2].variable.sameVariable(variables[0])
+  doAssert combined[combined.len - 1].coefficient == -2'ks
+
+  let negated = -expression
+  doAssert negated.len == variables.len
+  doAssert negated[6].coefficient == -7'ks
+  doAssert negated.constant == -3'ks
+
+  doAssertRaises(IndexDefect):
+    discard expression[variables.len]
