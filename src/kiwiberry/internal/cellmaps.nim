@@ -5,9 +5,15 @@ type
   Cell = object
     symbol: Symbol
     coefficient: KiwiScalar
+    link: int ## Owner-defined handle, such as a tableau index node; 0 if unset.
 
   CellMap* = object
     entries: seq[Cell]
+
+  CellChange* = enum
+    ccUpdated ## The symbol's presence did not change.
+    ccAdded ## The symbol now has a cell.
+    ccRemoved ## The symbol's coefficient cancelled to zero.
 
 proc initCellMap*(): CellMap {.inline.} =
   CellMap(entries: @[])
@@ -42,16 +48,55 @@ proc len*(map: CellMap): int {.inline.} =
 proc hasKey*(map: CellMap, symbol: Symbol): bool {.inline.} =
   map.findIndex(symbol) >= 0
 
-proc add*(map: var CellMap, symbol: Symbol, coefficient: KiwiScalar)  =
+proc accumulate*(
+    map: var CellMap, symbol: Symbol, coefficient: KiwiScalar, link: var int
+): CellChange =
+  ## Adds `coefficient` to `symbol`'s cell, dropping the cell when it cancels,
+  ## and reports whether a cell appeared or vanished. A dropped cell's link is
+  ## stored in `link`; a new cell has no link.
   let index = map.lowerIndex(symbol)
   if index < map.entries.len and map.entries[index].symbol == symbol:
     let next = map.entries[index].coefficient + coefficient
     if next.nearZero:
+      link = map.entries[index].link
       map.entries.delete(index)
+      ccRemoved
     else:
       map.entries[index].coefficient = next
+      ccUpdated
   elif not coefficient.nearZero:
     map.entries.insert(Cell(symbol: symbol, coefficient: coefficient), index)
+    ccAdded
+  else:
+    ccUpdated
+
+proc accumulate*(
+    map: var CellMap, symbol: Symbol, coefficient: KiwiScalar
+): CellChange =
+  var link: int
+  map.accumulate(symbol, coefficient, link)
+
+proc add*(map: var CellMap, symbol: Symbol, coefficient: KiwiScalar) =
+  discard map.accumulate(symbol, coefficient)
+
+proc linkFor*(map: CellMap, symbol: Symbol): int =
+  ## The link of `symbol`'s cell, or 0 when it has none.
+  let index = map.findIndex(symbol)
+  if index >= 0:
+    result = map.entries[index].link
+
+proc setLink*(map: var CellMap, symbol: Symbol, link: int) =
+  let index = map.findIndex(symbol)
+  if index >= 0:
+    map.entries[index].link = link
+
+iterator links*(map: CellMap): (Symbol, int) =
+  for cell in map.entries:
+    yield (cell.symbol, cell.link)
+
+iterator mlinks*(map: var CellMap): (Symbol, var int) =
+  for cell in map.entries.mitems:
+    yield (cell.symbol, cell.link)
 
 proc `[]`*(map: CellMap, symbol: Symbol): KiwiScalar {.inline.} =
   let index = map.findIndex(symbol)
